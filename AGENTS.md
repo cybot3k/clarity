@@ -1,0 +1,91 @@
+# Expo HAS CHANGED
+
+Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
+
+# The design system
+
+Every visual value comes from one place: `constants/theme.ts`. Read it before styling anything.
+
+```tsx
+import { colors, radius, spacing, springs, type } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { GlassSurface, PrimaryButton, SectionHeader, ThemedText } from '@/components/ui';
+```
+
+Four rules, in the order they get broken:
+
+1. **No hardcoded visual values.** No hex colors, no `fontSize`, no raw spacing or radius numbers outside `constants/`. A value used twice is a token. A genuine one-off (an optical nudge on a glyph) may stay inline **with a comment saying why** — that is the only exemption, and the audit below counts the rest.
+2. **Colors resolve through `useTheme()`**, never `useColorScheme()` plus a local `light/dark` map. That pattern is what gave the app two greens, six card radii, and seven grays.
+3. **Text is `<ThemedText variant=… tone=… />`**. Pick a ramp step and an ink tone; `weight` overrides the step's face. Nothing else names a `fontSize`.
+4. **Frosted cards are `<GlassSurface>`**, not a hand-rolled `isLiquidGlassAvailable()` branch. Exception: a card whose *child* needs its own glass must render `<GlassSurface style={StyleSheet.absoluteFill} />` as an absolute sibling, because nested glass does not render on iOS 26.
+
+Components import tokens; screens import components. A screen using `spacing` to lay out its own children is fine. A screen defining a button color is drift.
+
+## Extracting a component
+
+Promote a view into `components/ui/` only when all three hold: it appears in two or more screens, it has a nameable role, and its API is smaller than its implementation. Until then it stays where it is. Never wrap a platform component that already carries the design language (`Switch`, stack headers, `@expo/ui` views) just to route it through the system.
+
+## Auditing for drift
+
+The whole point is that these stay near zero. Run from the repo root:
+
+```bash
+grep -rEn '#[0-9a-fA-F]{3,8}\b' app components hooks lib --include='*.tsx' --include='*.ts'
+grep -rn 'fontSize: *[0-9]' app components --include='*.tsx'
+grep -rn 'borderRadius: *[0-9]' app components --include='*.tsx'
+grep -rEn '(padding|margin|gap)[A-Za-z]*:\s*-?[0-9]+' app components --include='*.tsx' \
+  | grep -vE ':\s*-?(0|2|4|8|12|16|20|24|32|48)\b'
+grep -rEn 'shadow(Color|Offset|Opacity|Radius)|elevation:' app components --include='*.tsx'
+```
+
+The spacing whitelist is the scale in `constants/spacing.ts` — update both together. Hits should be the handful of commented one-offs; anything else is a value that escaped the theme.
+
+# Typography: SF Pro Rounded
+
+All text uses SF Pro Rounded, bundled in `assets/fonts/` and loaded at runtime in `app/_layout.tsx` (Expo Go can't embed fonts at build time; the expo-font config plugin in `app.json` covers dev builds).
+
+Weight comes from `fontFamily`, never `fontWeight`, which makes iOS synthesize the weight or fall back to the system font. `ThemedText` handles this — its `weight` prop maps to a face:
+
+```tsx
+<ThemedText variant="footnote" weight="bold" tone="secondary">…</ThemedText>
+```
+
+Reach for `fonts` from `@/constants/theme` directly only where `ThemedText` can't go: a `TextInput`, an `Animated.Text`, or a SwiftUI Host that takes a font family as a prop.
+
+# Icons: Hugeicons Free
+
+This project uses the public Hugeicons free pack (docs: https://hugeicons.com/docs/integrations/react-native/quick-start). One style package is installed:
+
+- `@hugeicons/core-free-icons` — Stroke Rounded, MIT, no registry token
+
+## Usage
+
+Render icons with the `HugeiconsIcon` component from `@hugeicons/react-native`. Never use emoji, text glyphs, or other icon libraries.
+
+```tsx
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Mic01Icon } from '@hugeicons/core-free-icons';
+
+<HugeiconsIcon icon={Mic01Icon} size={24} color="#000" strokeWidth={1.5} />
+```
+
+Props: `icon`, `size` (default 24), `color`, `strokeWidth` (stroke styles only, default 1.5), plus `altIcon`/`showAlt` for toggling between two icons.
+
+## Looking up icon names
+
+Do NOT guess icon names — many have numeric suffixes (`Mic01Icon`, `Mic02Icon`, `MicIcon` all exist). Look them up locally:
+
+```bash
+ls node_modules/@hugeicons/core-free-icons/dist | grep -i <keyword>
+```
+
+Example: `ls node_modules/@hugeicons/core-free-icons/dist | grep -i micro` → `Microphone01Icon`, `Microphone02Icon`, etc. For visual browsing, search at https://hugeicons.com/icons (filter to Free).
+
+# Convex backend
+
+Backend code lives in `convex/` and runs on Convex, not in the app.
+
+- **Relative imports only inside `convex/`.** The root tsconfig's `@/*` alias typechecks there and then fails at push, because Convex's bundler does not read the app's paths. `bun run typecheck` runs both programs; the `-p convex` pass is what catches it.
+- Functions use the object form with explicit `args` and `returns` validators, `.withIndex(...)` never `.filter(...)`, and read the caller through `requireUserId` in `convex/lib.ts`. No function takes a `userId` argument.
+- Screens never call `useQuery`/`useMutation` for app data (account deletion in `app/settings.tsx` is the one exception), and `useConvexAuth` / `<Authenticated>` appear only in `components/convex-sync.tsx`. The stores in `services/` stay the synchronous source of truth so the first frame renders offline; Convex feeds them from behind.
+- `CLERK_FRONTEND_API_URL` is a Convex deployment env var, set with `bunx convex env set`, and differs between dev and prod. See `.env.example`.

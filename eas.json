@@ -1,0 +1,51 @@
+{
+  "cli": {
+    "version": ">= 20.5.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "APP_VARIANT": "development"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "preview",
+      "env": {
+        "APP_VARIANT": "preview"
+      }
+    },
+    "simulator": {
+      "extends": "preview",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_AUTOMATION": "1",
+        "EXPO_PUBLIC_MOCK_PRACTICE": "1",
+        "EXPO_PUBLIC_SEED_HOOKS": "1"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "APP_VARIANT": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6800457983"
+      }
+    }
+  }
+}
