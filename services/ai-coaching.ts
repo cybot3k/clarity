@@ -3,6 +3,7 @@ import { parsePartialJson } from 'ai';
 // NOTE: uses the global fetch (Expo's WinterCG fetch on SDK 57+), which both
 // streams response bodies and resolves relative URLs against the dev server.
 // `expo/fetch` resolves relative URLs against file:/// and would 404 here.
+import { speakingScore } from '@/lib/score';
 import type {
   AiCoachingBreakdown,
   PartialAiCoachingBreakdown,
@@ -112,11 +113,15 @@ export function buildSpeechCoachStats(result: SessionResult): SpeechCoachStats {
       : undefined;
   const weakSounds = weakestSounds(result.words);
   const prosody = prosodyFlags(result.words);
+  // The derived score, not `result.overallScore`. An unscored session's stored
+  // overall is 0 (or, before the floor reached the builder, a live-proxy 60–80)
+  // and either one would be coached as a real result.
+  const overallScore = speakingScore(result);
 
   return {
     mode,
     ...(transcriptExcerpt != null ? { transcriptExcerpt } : {}),
-    overallScore: result.overallScore,
+    ...(overallScore != null ? { overallScore } : {}),
     accuracy: result.accuracy,
     fluency: result.fluency,
     completeness: result.completeness,

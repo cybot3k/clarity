@@ -40,6 +40,33 @@ const PRONUNCIATION_AUDIO_MODE = {
 const CLIP_PAD_MS = 120;
 
 let player: AudioPlayer | null = null;
+let playGeneration = 0;
+
+function releasePlayer(target: AudioPlayer | null): void {
+  if (!target) return;
+  try {
+    target.pause();
+  } catch {
+    // already stopped
+  }
+  try {
+    target.remove();
+  } catch {
+    // already released
+  }
+}
+
+function releaseCurrent(): void {
+  const current = player;
+  player = null;
+  releasePlayer(current);
+}
+
+/** Stops the module-level clip, if any. Safe to call when nothing is playing. */
+export function stopSpeaking(): void {
+  playGeneration += 1;
+  releaseCurrent();
+}
 
 function clipFile(word: string): File {
   return new File(Paths.cache, `pronounce-${encodeURIComponent(word.toLowerCase())}.mp3`);
@@ -68,14 +95,28 @@ async function fetchPronunciation(word: string, file: File): Promise<void> {
 }
 
 async function play(uri: string): Promise<void> {
+  const generation = ++playGeneration;
+  releaseCurrent();
   try {
     await setAudioModeAsync(PRONUNCIATION_AUDIO_MODE);
   } catch {
     // Non-fatal: playback still happens, possibly on the wrong output route.
   }
-  player?.remove();
-  player = createAudioPlayer(uri);
-  player.play();
+  if (generation !== playGeneration) return;
+  let next: AudioPlayer | null = null;
+  try {
+    next = createAudioPlayer(uri);
+    if (generation !== playGeneration) {
+      releasePlayer(next);
+      return;
+    }
+    player = next;
+    next.play();
+  } catch (error) {
+    if (player === next) player = null;
+    releasePlayer(next);
+    throw error;
+  }
 }
 
 /**
@@ -84,8 +125,10 @@ async function play(uri: string): Promise<void> {
  * it does not wait for the clip to finish.
  */
 export async function speakWord(word: string): Promise<void> {
+  const generation = playGeneration;
   const file = clipFile(word);
   if (!file.exists) await fetchPronunciation(word, file);
+  if (generation !== playGeneration) return;
   await play(file.uri);
 }
 
@@ -102,6 +145,7 @@ export async function playOwnAttempt(
   startMs: number,
   endMs: number,
 ): Promise<void> {
+  const generation = playGeneration;
   const source = new File(sessionAudioUri);
   if (!source.exists) throw new Error('That recording is no longer available.');
 
@@ -118,5 +162,6 @@ export async function playOwnAttempt(
     // Overwriting below is enough.
   }
   out.write(clip);
+  if (generation !== playGeneration) return;
   await play(out.uri);
 }

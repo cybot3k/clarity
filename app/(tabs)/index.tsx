@@ -142,7 +142,7 @@ export default function HomeScreen() {
         </IntroReveal>
       </View>
       <IntroReveal order={1}>
-        <WeeklyProgress todayProgress={stats.todayProgress} history={stats.weeklyHistory} />
+        <WeeklyProgress now={now} todayProgress={stats.todayProgress} history={stats.weeklyHistory} />
       </IntroReveal>
       <IntroReveal order={2} fade={false}>
         <DailyGoalCard percent={percent} onStartPractice={startPractice} />
@@ -154,6 +154,7 @@ export default function HomeScreen() {
         <PassageCarousel
           items={PASSAGES}
           onStart={(item) => router.push(`/session/${item.id}`)}
+          horizontalPadding={spacing.xl}
         />
       </IntroReveal>
       <IntroReveal order={5}>
@@ -170,7 +171,7 @@ export default function HomeScreen() {
           <EmptyStateCard
             icon={AnalyticsUpIcon}
             title="No progress yet"
-            subtitle="Finish your first practice session and your best score, streak, and minutes will show up here."
+            subtitle="Finish your first practice session and your 7-day score, minutes, sessions, and best streak will show up here."
           />
         )}
       </IntroReveal>

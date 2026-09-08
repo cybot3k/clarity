@@ -158,7 +158,9 @@ export default function ResultsScreen() {
         }}>
         {/* The DERIVED score, never the persisted one. A session below the
             scoring floor has no score at all, and `overallScore` would render a
-            confident 0 rather than saying so. */}
+            confident 0 rather than saying so. Silence is spokenWords, not a
+            missing recordId: persist can also fail, and that is a save error,
+            not an empty take. */}
         {sessionScore != null ? (
           <ScoreGauge
             score={sessionScore}
@@ -166,27 +168,39 @@ export default function ResultsScreen() {
           />
         ) : (
           <UnscoredNotice
-            title={recordId == null ? "We didn't hear anything" : 'Too short to score'}
+            title={
+              result.spokenWords <= 0
+                ? "We didn't hear anything"
+                : recordId == null
+                  ? "Couldn't save this session"
+                  : 'Too short to score'
+            }
             detail={
-              recordId == null
+              result.spokenWords <= 0
                 ? 'Check that your mic is enabled and try speaking a little closer to it.'
-                : 'It still counts toward your practice time and your streak.'
+                : recordId == null
+                  ? "This attempt didn't make it into your history. Try again in a moment."
+                  : 'It still counts toward your practice time and your streak.'
             }
           />
         )}
         <View style={styles.playback}>
           <PlaybackPill result={result} />
         </View>
-        <View style={styles.skillsHeader}>
-          <ThemedText variant="title">Skills</ThemedText>
-          <ThemedText variant="subhead" weight="regular" tone="secondary">
-            How this session compares to your average
-          </ThemedText>
-        </View>
-        <SkillCard skills={skills} captions={captions} deltas={deltas} />
-        <View style={styles.coaching}>
-          <AiCoachingCard result={result} />
-        </View>
+        {sessionScore != null ? (
+          <>
+            <View style={styles.skillsHeader}>
+              <ThemedText variant="title">Skills</ThemedText>
+              <ThemedText variant="subhead" weight="regular" tone="secondary">
+                How this session compares to your average
+              </ThemedText>
+            </View>
+            <SkillCard skills={skills} captions={captions} deltas={deltas} />
+            <View style={styles.coaching}>
+              <AiCoachingCard result={result} />
+            </View>
+          </>
+        ) : null}
         <View style={styles.breakdown}>
           {result.mode === 'freestyle' ? (
             <TranscriptCard transcript={result.transcript ?? ''} />

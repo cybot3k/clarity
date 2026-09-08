@@ -1,9 +1,9 @@
 import { useClerk, useUser } from '@clerk/expo';
 import { useMutation } from 'convex/react';
-import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
+import { Cancel01Icon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
-import { Observe } from 'expo-observe';
+import { Observe } from '@/services/observe';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
@@ -400,7 +400,16 @@ export default function SettingsScreen() {
         </Stack.Toolbar.View>
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button icon="xmark" onPress={handleClose} />
+        <Stack.Toolbar.View hidesSharedBackground>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={handleClose}
+            style={styles.closeHit}
+            hitSlop={spacing.sm}>
+            <HugeiconsIcon icon={Cancel01Icon} size={22} color={colors.foreground} />
+          </Pressable>
+        </Stack.Toolbar.View>
       </Stack.Toolbar>
     </>
   );
@@ -412,6 +421,12 @@ const styles = StyleSheet.create({
   headerTitleBox: {
     width: TOOLBAR_TITLE_WIDTH,
     height: TOOLBAR_TITLE_HEIGHT,
+    justifyContent: 'center',
+  },
+  closeHit: {
+    width: TOOLBAR_TITLE_HEIGHT,
+    height: TOOLBAR_TITLE_HEIGHT,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   content: {

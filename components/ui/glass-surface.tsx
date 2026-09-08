@@ -51,11 +51,8 @@ export function GlassSurface({
     <GlassView
       glassEffectStyle="regular"
       isInteractive={interactive}
-      style={[
-        shape,
-        { backgroundColor: tint === 'strong' ? colors.glassTintStrong : colors.glassTint },
-        style,
-      ]}>
+      tintColor={tint === 'strong' ? colors.glassTintStrong : colors.glassTint}
+      style={[shape, style]}>
       {children}
     </GlassView>
   );

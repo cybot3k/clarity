@@ -38,6 +38,10 @@ export const atmosphere = {
   ledHeight: { sm: 20, md: 30, hero: 47 },
   ledWidth: { sm: 14, md: 21, hero: 33 },
   cursorSize: 28,
+  /** Isolated scored-point diameter on the Analytics polyline. */
+  chartVertexSize: 6,
+  /** Practiced-but-unscored mark diameter; hollow so it is not a score. */
+  chartUnscoredSize: 5,
   /** Home / Analytics day-letter chip diameter. */
   dayChipSize: 28,
   /** Progress Path stroke on Daily Goal and Results. */

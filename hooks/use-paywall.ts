@@ -17,15 +17,26 @@
  */
 
 import * as Haptics from 'expo-haptics';
-import { Observe } from 'expo-observe';
+import { Observe } from '@/services/observe';
 import { useCallback } from 'react';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import type { PurchasesOffering } from 'react-native-purchases';
 
 import { useSubscription } from '@/hooks/use-subscription';
 import { PRO_ENTITLEMENT_ID } from '@/lib/entitlements';
 import { paywallResolved, type PaywallSource } from '@/services/observe-events';
 import { describePurchasesError } from '@/services/purchases';
+import { isExpoGo } from '@/services/runtime';
+
+type PurchasesUi = typeof import('react-native-purchases-ui').default;
+
+function loadPurchasesUi(): PurchasesUi | null {
+  if (isExpoGo()) return null;
+  try {
+    return require('react-native-purchases-ui').default as PurchasesUi;
+  } catch {
+    return null;
+  }
+}
 
 export type PaywallOutcome =
   | 'purchased'
@@ -41,15 +52,15 @@ function unlocked(outcome: PaywallOutcome): boolean {
   return outcome === 'purchased' || outcome === 'restored' || outcome === 'notPresented';
 }
 
-function toOutcome(result: PAYWALL_RESULT): PaywallOutcome {
+function toOutcome(result: string): PaywallOutcome {
   switch (result) {
-    case PAYWALL_RESULT.PURCHASED:
+    case 'PURCHASED':
       return 'purchased';
-    case PAYWALL_RESULT.RESTORED:
+    case 'RESTORED':
       return 'restored';
-    case PAYWALL_RESULT.NOT_PRESENTED:
+    case 'NOT_PRESENTED':
       return 'notPresented';
-    case PAYWALL_RESULT.CANCELLED:
+    case 'CANCELLED':
       return 'cancelled';
     default:
       return 'error';
@@ -87,9 +98,11 @@ export function usePaywall() {
   const presentPaywall = useCallback(
     async (offering?: PurchasesOffering): Promise<PaywallOutcome> => {
       if (!available) return 'error';
+      const RevenueCatUI = loadPurchasesUi();
+      if (!RevenueCatUI) return settle('explicit', 'error');
       try {
         const result = await RevenueCatUI.presentPaywall({ offering, displayCloseButton: true });
-        return settle('explicit', toOutcome(result));
+        return settle('explicit', toOutcome(String(result)));
       } catch (cause) {
         console.warn('[purchases] paywall failed', describePurchasesError(cause), cause);
         // `paywall.resolved` records that it could not present; this records why.
@@ -104,13 +117,15 @@ export function usePaywall() {
   const presentPaywallIfNeeded = useCallback(
     async (offering?: PurchasesOffering): Promise<PaywallOutcome> => {
       if (!available) return 'error';
+      const RevenueCatUI = loadPurchasesUi();
+      if (!RevenueCatUI) return settle('gate', 'error');
       try {
         const result = await RevenueCatUI.presentPaywallIfNeeded({
           requiredEntitlementIdentifier: PRO_ENTITLEMENT_ID,
           offering,
           displayCloseButton: true,
         });
-        return settle('gate', toOutcome(result));
+        return settle('gate', toOutcome(String(result)));
       } catch (cause) {
         console.warn('[purchases] paywall failed', describePurchasesError(cause), cause);
         Observe.reportError(cause);
@@ -154,6 +169,8 @@ export function usePaywall() {
    */
   const presentCustomerCenter = useCallback(async () => {
     if (!available) return;
+    const RevenueCatUI = loadPurchasesUi();
+    if (!RevenueCatUI) return;
     try {
       await RevenueCatUI.presentCustomerCenter({
         callbacks: {

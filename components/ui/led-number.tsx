@@ -30,7 +30,11 @@ function formatValue(value: number | string | null): string {
   return String(Math.round(value * 10) / 10);
 }
 
-function accessibilityFor(display: string, unit?: string, original: number | string | null): string {
+function accessibilityFor(
+  display: string,
+  unit?: string,
+  original: number | string | null = null,
+): string {
   if (original == null) return 'No value';
   if (unit === '/100') return `${display} out of 100`;
   if (unit === '%') return `${display} percent`;
@@ -53,7 +57,8 @@ export function LedNumber({
   const digitH = 7 * cell + 6 * gap;
   const onR = cell / 2;
   const glowR = (cell + glow) / 2;
-  const offR = (cell * 0.4) / 2;
+  // Android SVG drops circles below ~1px; sm off-dots are 0.4px without the floor.
+  const offR = Math.max(1, (cell * 0.4) / 2);
   const isNull = value == null;
   const display = formatValue(value);
   const ink = tone === 'ink';

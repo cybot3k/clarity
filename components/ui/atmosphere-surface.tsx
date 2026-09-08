@@ -83,6 +83,19 @@ function defaultDotted(mesh: AtmosphereMesh): boolean {
   return mesh !== 'hero' && mesh !== 'artwork';
 }
 
+/** CSS `transparent` is rgba(0,0,0,0); gradients interpolate through black. */
+function transparentStop(color: string): string {
+  const rgb = color.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (rgb) return `rgba(${rgb[1]}, ${rgb[2]}, ${rgb[3]}, 0)`;
+  if (color[0] === '#' && (color.length === 7 || color.length === 9)) {
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, 0)`;
+  }
+  return color;
+}
+
 /**
  * Chromatic weather card. Sibling of GlassSurface — never nested inside one.
  * One gradient per View; ellipse radii are px from onLayout.
@@ -117,15 +130,15 @@ export function AtmosphereSurface({
   if (canPaint) {
     if (stops.kind === 'hero' && stops.via && stops.to && stops.accent) {
       linearCss = `linear-gradient(to bottom, ${stops.from} 0%, ${stops.via} 42%, ${stops.to} 100%)`;
-      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.85)}px ${Math.round(h * 0.55)}px at 85% 100%, ${stops.accent} 0%, transparent 70%)`;
+      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.85)}px ${Math.round(h * 0.55)}px at 85% 100%, ${stops.accent} 0%, ${transparentStop(stops.accent)} 70%)`;
     } else if (stops.kind === 'metric' && stops.via && stops.to) {
       linearCss = `linear-gradient(to right, ${stops.from} 0%, ${stops.via} 42%, ${stops.to} 100%)`;
-      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.8)}px ${Math.round(h * 0.9)}px at 100% 50%, ${stops.to} 0%, transparent 72%)`;
+      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.8)}px ${Math.round(h * 0.9)}px at 100% 50%, ${stops.to} 0%, ${transparentStop(stops.to)} 72%)`;
     } else if (stops.kind === 'add') {
-      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.7)}px ${Math.round(h * 0.8)}px at 100% 50%, ${colors.addLeakHot} 0%, ${colors.addLeak} 38%, transparent 72%)`;
+      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.7)}px ${Math.round(h * 0.8)}px at 100% 50%, ${colors.addLeakHot} 0%, ${colors.addLeak} 38%, ${transparentStop(colors.addLeak)} 72%)`;
     } else if (stops.kind === 'artwork' && artwork) {
       linearCss = `linear-gradient(to bottom, ${artwork.base[0]} 0%, ${artwork.base[1]} 100%)`;
-      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.6)}px ${Math.round(w * 0.6)}px at 100% 0%, ${artwork.blob[0]} 0%, ${artwork.blob[1]} 40%, transparent 100%)`;
+      radialCss = `radial-gradient(ellipse ${Math.round(w * 0.6)}px ${Math.round(w * 0.6)}px at 100% 0%, ${artwork.blob[0]} 0%, ${artwork.blob[1]} 40%, ${transparentStop(artwork.blob[1])} 100%)`;
     }
   }
 

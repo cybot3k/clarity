@@ -1,4 +1,4 @@
-import { useObserve } from 'expo-observe';
+import { useObserve } from '@/services/observe';
 import { createContext, use, useEffect, useRef } from 'react';
 
 /**

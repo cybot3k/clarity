@@ -3,7 +3,8 @@ export type SpeechCoachStats = {
   mode: 'passage' | 'drill' | 'freestyle';
   /** Freestyle only: the recognized transcript, capped for the prompt. */
   transcriptExcerpt?: string;
-  overallScore: number;
+  /** Absent when the session fell below the scoring floor — never a placeholder. */
+  overallScore?: number;
   accuracy: number;
   fluency: number;
   completeness: number;

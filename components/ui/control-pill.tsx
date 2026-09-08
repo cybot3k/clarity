@@ -1,7 +1,7 @@
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius } from '@/constants/theme';
+import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ControlPillVariant = 'frost' | 'solid';
@@ -32,6 +32,8 @@ export function ControlPill({
   const shape: ViewStyle = {
     height: HEIGHTS[size],
     borderRadius: radius.full,
+    borderCurve: 'continuous',
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

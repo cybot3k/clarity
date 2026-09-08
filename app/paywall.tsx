@@ -11,7 +11,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PACKAGE_TYPE, type PurchasesPackage } from 'react-native-purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 
 import { OptionCard, PrimaryButton, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
@@ -31,16 +31,20 @@ const FEATURES = [
   'Early access to new features',
 ];
 
+const PLAN_ANNUAL = 'ANNUAL';
+const PLAN_MONTHLY = 'MONTHLY';
+const PLAN_WEEKLY = 'WEEKLY';
+
 /** Display order and the per-card caption wording, keyed by package type. */
-const PLAN_LABELS: Partial<Record<PACKAGE_TYPE, { title: string; caption: string }>> = {
-  [PACKAGE_TYPE.ANNUAL]: { title: 'Annual', caption: 'per year' },
-  [PACKAGE_TYPE.MONTHLY]: { title: 'Monthly', caption: 'per month' },
-  [PACKAGE_TYPE.WEEKLY]: { title: 'Weekly', caption: 'per week' },
+const PLAN_LABELS: Partial<Record<string, { title: string; caption: string }>> = {
+  [PLAN_ANNUAL]: { title: 'Annual', caption: 'per year' },
+  [PLAN_MONTHLY]: { title: 'Monthly', caption: 'per month' },
+  [PLAN_WEEKLY]: { title: 'Weekly', caption: 'per week' },
 };
 
 /** Annual first because it is the default selection and carries the badge. */
 function sortPlans(packages: PurchasesPackage[]): PurchasesPackage[] {
-  const order = [PACKAGE_TYPE.ANNUAL, PACKAGE_TYPE.MONTHLY, PACKAGE_TYPE.WEEKLY];
+  const order = [PLAN_ANNUAL, PLAN_MONTHLY, PLAN_WEEKLY];
   return packages
     .filter((pkg) => order.includes(pkg.packageType))
     .sort((a, b) => order.indexOf(a.packageType) - order.indexOf(b.packageType));
@@ -52,8 +56,8 @@ function sortPlans(packages: PurchasesPackage[]): PurchasesPackage[] {
  * when either plan is missing or the math yields nothing worth bragging about.
  */
 function annualSavings(plans: PurchasesPackage[]): number | null {
-  const annual = plans.find((pkg) => pkg.packageType === PACKAGE_TYPE.ANNUAL);
-  const monthly = plans.find((pkg) => pkg.packageType === PACKAGE_TYPE.MONTHLY);
+  const annual = plans.find((pkg) => pkg.packageType === PLAN_ANNUAL);
+  const monthly = plans.find((pkg) => pkg.packageType === PLAN_MONTHLY);
   const yearAtMonthlyRate = monthly?.product.pricePerYear ?? null;
   if (!annual || !yearAtMonthlyRate) return null;
 
@@ -101,7 +105,7 @@ function PlanCard({
   const labels = PLAN_LABELS[plan.packageType];
   if (!labels) return null;
 
-  const isAnnual = plan.packageType === PACKAGE_TYPE.ANNUAL;
+  const isAnnual = plan.packageType === PLAN_ANNUAL;
   const perMonth = isAnnual ? plan.product.pricePerMonthString : null;
 
   return (
@@ -313,7 +317,7 @@ export default function PaywallScreen() {
               key={plan.identifier}
               plan={plan}
               selected={plan.identifier === selectedId}
-              savings={plan.packageType === PACKAGE_TYPE.ANNUAL ? savings : null}
+              savings={plan.packageType === PLAN_ANNUAL ? savings : null}
               onSelect={() => setSelectedId(plan.identifier)}
             />
           ))}

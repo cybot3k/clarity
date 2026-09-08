@@ -1,9 +1,11 @@
-import { Book02Icon } from '@hugeicons/core-free-icons';
+import { Book02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/segmented-control';
 import { PrimaryButton, ThemedText } from '@/components/ui';
@@ -40,6 +42,8 @@ export default function PassageEditorScreen() {
   useMarkInteractive();
 
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, spacing.lg);
 
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
@@ -87,8 +91,9 @@ export default function PassageEditorScreen() {
         style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: spacing.xxxxl + 80 }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}>
         <EditorCard>
           <ThemedText variant="footnote" tone="secondary" style={styles.caption}>
@@ -103,6 +108,8 @@ export default function PassageEditorScreen() {
             placeholder="My speech"
             placeholderTextColor={colors.secondary}
             maxLength={48}
+            underlineColorAndroid="transparent"
+            returnKeyType="next"
             style={[styles.titleInput, { color: colors.foreground }]}
           />
         </EditorCard>
@@ -125,6 +132,7 @@ export default function PassageEditorScreen() {
             maxLength={PASSAGE_TEXT_MAX}
             multiline
             textAlignVertical="top"
+            underlineColorAndroid="transparent"
             style={[styles.textInput, { color: colors.foreground }]}
           />
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
@@ -153,14 +161,17 @@ export default function PassageEditorScreen() {
           />
         </EditorCard>
 
-        <PrimaryButton
-          title="Save to Library"
-          icon={Book02Icon}
-          onPress={handleSave}
-          disabled={!canSave}
-          style={styles.save}
-        />
       </ScrollView>
+      <KeyboardStickyView offset={{ closed: 0, opened: bottomPad }}>
+        <View style={[styles.saveBar, { paddingBottom: bottomPad }]}>
+          <PrimaryButton
+            title="Save to Library"
+            icon={Book02Icon}
+            onPress={handleSave}
+            disabled={!canSave}
+          />
+        </View>
+      </KeyboardStickyView>
 
       {/* Custom title on the LEFT of the header bar (iOS centers regular
           titles), vertically centered via the fixed-size toolbar view.
@@ -175,7 +186,16 @@ export default function PassageEditorScreen() {
         </Stack.Toolbar.View>
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button icon="xmark" onPress={handleClose} />
+        <Stack.Toolbar.View hidesSharedBackground>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={handleClose}
+            style={styles.closeHit}
+            hitSlop={spacing.sm}>
+            <HugeiconsIcon icon={Cancel01Icon} size={22} color={colors.foreground} />
+          </Pressable>
+        </Stack.Toolbar.View>
       </Stack.Toolbar>
     </>
   );
@@ -226,7 +246,14 @@ const styles = StyleSheet.create({
   meta: {
     fontVariant: ['tabular-nums'],
   },
-  save: {
-    marginTop: spacing.sm,
+  saveBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  closeHit: {
+    width: TOOLBAR_TITLE_HEIGHT,
+    height: TOOLBAR_TITLE_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

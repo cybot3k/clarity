@@ -29,7 +29,7 @@ import { forgetPurchaser } from '@/services/purchases';
 import { setIdentifiedPurchaserId, setLastSignedInUserId } from '@/services/auth-state';
 import { clearAccountHistory } from '@/services/session-history';
 import { resetSettings } from '@/services/settings';
-import { clearSyncState, resumeSync, suspendSync } from '@/services/sync-state';
+import { clearSyncState, resetSettingsResolved, resumeSync, suspendSync } from '@/services/sync-state';
 import { clearCustomPassages } from '@/services/user-passages';
 
 export type SignOutFn = () => Promise<unknown>;
@@ -48,6 +48,7 @@ export function clearAccountData() {
   // `signOutAndClear` forgets the purchaser on the way out, so the next
   // sign-in on this device has to identify again.
   setIdentifiedPurchaserId(null);
+  resetSettingsResolved();
 }
 
 export async function signOutAndClear(signOut: SignOutFn): Promise<void> {

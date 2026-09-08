@@ -25,7 +25,19 @@ function resolve(): { kv: KvBackend; durable: boolean } {
     mmkvBackend.contains('meta/probe');
     return { kv: mmkvBackend, durable: true };
   } catch (error) {
-    console.warn('[storage] MMKV unavailable, falling back to memory', error);
+    console.warn('[storage] MMKV unavailable, trying file-backed store', error);
+  }
+
+  // Expo Go (and a stale dev binary) have no MMKV. A JSON file in the document
+  // directory is still synchronous via expo-file-system's textSync/write, so
+  // first-frame stores keep working and data survives reload.
+  try {
+    const { createFileKv } = require('@/services/file-kv') as typeof import('@/services/file-kv');
+    const fileKv = createFileKv();
+    fileKv.contains('meta/probe');
+    return { kv: fileKv, durable: true };
+  } catch (error) {
+    console.warn('[storage] file kv unavailable, falling back to memory', error);
     return { kv: createMemoryKv(), durable: false };
   }
 }

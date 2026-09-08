@@ -57,7 +57,7 @@ const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 export function PassageCarousel({
   items,
   onStart,
-  horizontalPadding = 20,
+  horizontalPadding = spacing.xl,
 }: PassageCarouselProps) {
   const { width: screenWidth } = useWindowDimensions();
   const itemWidth = (screenWidth - horizontalPadding * 2) / VISIBLE_RATIO;
@@ -209,8 +209,7 @@ const PassageCard = memo(function PassageCard({
           style={[
             StyleSheet.absoluteFill,
             {
-              experimental_backgroundImage:
-                'linear-gradient(to bottom, transparent 38%, rgba(0,0,0,0.38) 66%, rgba(0,0,0,0.68) 100%)',
+              experimental_backgroundImage: `linear-gradient(to bottom, transparent 38%, ${colors.artworkScrim} 66%, ${colors.artworkScrimStrong} 100%)`,
             },
           ]}
         />

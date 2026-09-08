@@ -5,5 +5,5 @@ import type { CustomPassage } from '@/types/session';
 
 /** User-authored passages, oldest first; re-renders on add/remove. */
 export function useCustomPassages(): readonly CustomPassage[] {
-  return useSyncExternalStore(subscribe, getCustomPassages);
+  return useSyncExternalStore(subscribe, getCustomPassages, getCustomPassages);
 }

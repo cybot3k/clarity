@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import {
   setAudioModeAsync,
   useAudioPlayer,
@@ -29,22 +29,24 @@ async function routeAudioToSpeaker() {
   }
 }
 
+const UNAVAILABLE: ResultPlayback = {
+  available: false,
+  isPlaying: false,
+  positionMs: 0,
+  toggle() {},
+};
+
 /**
  * Playback for the results screen's audio pill.
  *
  * When audioUri is non-null the session's recorded WAV plays through
  * expo-audio's useAudioPlayer (status polled at 250ms). When audioUri is null
- * (mock sessions / recording failure) a simulated ticking position keeps the
- * UI fully exercisable. Both paths expose the same frozen interface.
+ * (mock sessions / recording failure) the hook reports `available: false`
+ * rather than simulating a playhead.
  */
-export function useResultPlayback(audioUri: string | null, durationMs: number): ResultPlayback {
+export function useResultPlayback(audioUri: string | null, _durationMs: number): ResultPlayback {
   const player = useAudioPlayer(audioUri, { updateInterval: 250 });
   const playerStatus = useAudioPlayerStatus(player);
-
-  // Simulated path state (used only when audioUri is null).
-  const [simPlaying, setSimPlaying] = useState(false);
-  const [simPositionMs, setSimPositionMs] = useState(0);
-  const simPositionRef = useRef(0);
 
   // Speech recognition leaves the shared session on play-and-record with the
   // .measurement mode and never restores it. Reset category and mode so the
@@ -55,52 +57,34 @@ export function useResultPlayback(audioUri: string | null, durationMs: number): 
     if (audioUri) void routeAudioToSpeaker();
   }, [audioUri]);
 
-  useEffect(() => {
-    if (audioUri || !simPlaying) return;
-    const interval = setInterval(() => {
-      simPositionRef.current += 250;
-      if (simPositionRef.current >= durationMs) {
-        simPositionRef.current = 0;
-        setSimPositionMs(0);
-        setSimPlaying(false);
-        return;
-      }
-      setSimPositionMs(simPositionRef.current);
-    }, 250);
-    return () => clearInterval(interval);
-  }, [audioUri, simPlaying, durationMs]);
-
-  // Real path: rewind after the clip finishes so the pill resets.
+  // Pause and rewind after the clip finishes so the pill resets. play() after
+  // didJustFinish is a no-op on iOS unless the player has been paused and
+  // seeked back to 0; the seek must complete before the next play() call.
   useEffect(() => {
     if (audioUri && playerStatus.didJustFinish) {
-      player.seekTo(0).catch(() => {});
+      player.pause();
+      void player.seekTo(0);
     }
   }, [audioUri, playerStatus.didJustFinish, player]);
 
-  if (audioUri) {
-    return {
-      isPlaying: playerStatus.playing,
-      positionMs: Math.round(playerStatus.currentTime * 1000),
-      async toggle() {
-        if (playerStatus.playing) {
-          player.pause();
-          return;
-        }
-        const durationSec = playerStatus.duration;
-        if (durationSec > 0 && playerStatus.currentTime >= durationSec - 0.05) {
-          player.seekTo(0).catch(() => {});
-        }
-        await routeAudioToSpeaker();
-        player.play();
-      },
-    };
-  }
+  if (!audioUri) return UNAVAILABLE;
 
   return {
-    isPlaying: simPlaying,
-    positionMs: simPositionMs,
-    toggle() {
-      setSimPlaying((p) => !p);
+    available: true,
+    isPlaying: playerStatus.playing,
+    positionMs: Math.round(playerStatus.currentTime * 1000),
+    async toggle() {
+      if (playerStatus.playing) {
+        player.pause();
+        return;
+      }
+      try {
+        await player.seekTo(0);
+      } catch {
+        // Play anyway; a failed rewind is better than a dead control.
+      }
+      await routeAudioToSpeaker();
+      player.play();
     },
   };
 }

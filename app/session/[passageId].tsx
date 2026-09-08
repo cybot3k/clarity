@@ -25,14 +25,6 @@ import type { SessionEndedReason } from '@/types/history';
 
 import { useSessionContext } from './_layout';
 
-function dismissToHome() {
-  try {
-    router.dismissTo('/');
-  } catch {
-    router.dismissAll();
-  }
-}
-
 /** Clears the absolutely-positioned SessionTopBar, plus breathing room. */
 const CONTENT_TOP_GAP = 82;
 
@@ -62,18 +54,21 @@ export default function PracticeScreen() {
   // stable effects/callbacks always act on the latest instance.
   const sessionRef = useRef(session);
   const navigatedRef = useRef(false);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
 
-  useEffect(() => {
-    if (!found) router.back();
-  }, [found]);
-
   // Explicit start on mount (per contract — never auto inside the hook), and
   // cancel anything still running if the whole session flow unmounts.
+  // Unknown ids must not start a fallback passage — that used to flash Epic
+  // Speech and grab the mic before router.back().
   useEffect(() => {
+    if (!found) {
+      router.back();
+      return;
+    }
     sessionRef.current.start();
     return () => {
       const s = sessionRef.current;
@@ -88,6 +83,7 @@ export default function PracticeScreen() {
     if (retryToken === prevRetryRef.current) return;
     prevRetryRef.current = retryToken;
     navigatedRef.current = false;
+    cancelledRef.current = false;
     sessionRef.current.restart();
   }, [retryToken]);
 
@@ -126,6 +122,8 @@ export default function PracticeScreen() {
         // protect. Pushing Results does NOT unmount this screen, so without this
         // the checkpoint would survive and be recovered as a duplicate record.
         checkpoint.end();
+        // Dismiss during scoring cancels this navigation; the record still lands.
+        if (cancelledRef.current) return;
         setResult(result, written.ok ? written.record.id : null);
         router.push('/session/results');
       } catch {
@@ -149,11 +147,20 @@ export default function PracticeScreen() {
    */
   const handleDismiss = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    cancelledRef.current = true;
     const s = sessionRef.current;
-    const live = s.status === 'listening' || s.status === 'paused';
+    const alreadyFinishing = navigatedRef.current;
     // Stop the 'done' effect from also pushing the results screen.
     navigatedRef.current = true;
-    if (live) {
+    if (alreadyFinishing) {
+      // finishSession is in-flight (Stop or auto-complete). It will bank the
+      // attempt; we only cancel its Results push.
+      router.back();
+      return;
+    }
+    const inProgress =
+      s.status === 'listening' || s.status === 'paused' || s.status === 'processing';
+    if (inProgress) {
       // stop() flips to 'processing' synchronously, so the unmount cleanup won't
       // abort it. Fire and forget so dismissing stays instant — and the
       // checkpoint is cleared only once the write has actually landed, so a kill
@@ -166,7 +173,7 @@ export default function PracticeScreen() {
     } else {
       checkpoint.end();
     }
-    dismissToHome();
+    router.back();
   }, [meta, checkpoint]);
 
   const handleTextSize = useCallback(() => {
@@ -247,7 +254,10 @@ export default function PracticeScreen() {
         bottomInset={windowHeight * 0.55}
       />
 
-      <SessionTopBar onDismiss={handleDismiss} onTextSize={handleTextSize}>
+      <SessionTopBar
+        onDismiss={handleDismiss}
+        dismissDisabled={session.status === 'processing'}
+        onTextSize={handleTextSize}>
         <LiveWpm liveWpm={session.liveWpm} targetWpm={passage.targetWpm} />
       </SessionTopBar>
 

@@ -1,13 +1,13 @@
 import { Cancel01Icon, Mic01Icon, VolumeHighIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { playOwnAttempt, speakWord } from '@/services/word-pronunciation';
+import { playOwnAttempt, speakWord, stopSpeaking } from '@/services/word-pronunciation';
 import { PHONEME_WEAK_MAX, weakestPhoneme, type ResultWord } from '@/types/session';
 
 export type WordDetailProps = {
@@ -163,6 +163,8 @@ export function WordDetail({ word, audioUri, onDismiss }: WordDetailProps) {
     () => playOwnAttempt(audioUri!, word.audioStartMs!, word.audioEndMs!),
     [audioUri, word.audioStartMs, word.audioEndMs],
   );
+
+  useEffect(() => () => stopSpeaking(), []);
 
   return (
     <ScrollView

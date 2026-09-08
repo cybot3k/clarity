@@ -2,6 +2,8 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
 import { StyleSheet, View, ViewProps } from 'react-native';
 
+import { useTheme } from '@/hooks/use-theme';
+
 /** Shared falloff beyond floating navigation chrome. */
 export const CHROME_BLUR_BLEED = 44;
 
@@ -10,9 +12,19 @@ type Props = ViewProps & {
   intensity?: number;
   /** Which edge the blur is anchored to (strongest there, fading away). */
   direction?: 'top' | 'bottom';
-  /** Blur material + gradient color scheme. */
+  /** Blur material. Defaults to the current color scheme. */
   tint?: 'light' | 'dark';
 };
+
+/** `r,g,b` from a `#rrggbb` or `rgba(r,g,b,a)` token — gradient stops need channels. */
+function rgbChannels(color: string): string {
+  if (color.startsWith('#')) {
+    const n = parseInt(color.slice(1, 7), 16);
+    return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+  }
+  const m = /(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(color);
+  return m ? `${m[1]},${m[2]},${m[3]}` : '0,0,0';
+}
 
 /**
  * Progressive (gradient) blur: one BlurView alpha-masked by an eased
@@ -24,11 +36,13 @@ export function ProgressiveBlur({
   style,
   intensity = 40,
   direction = 'top',
-  tint = 'dark',
+  tint,
   ...rest
 }: Props) {
+  const { colors, scheme } = useTheme();
+  const blurTint = tint ?? scheme;
   const toEdge = direction === 'top' ? 'bottom' : 'top';
-  const rgb = tint === 'dark' ? '0,0,0' : '255,255,255';
+  const rgb = rgbChannels(colors.chromeScrim);
 
   return (
     <View pointerEvents="none" style={style} {...rest}>
@@ -42,7 +56,7 @@ export function ProgressiveBlur({
             }}
           />
         }>
-        <BlurView tint={tint} intensity={intensity} style={StyleSheet.absoluteFill} />
+        <BlurView tint={blurTint} intensity={intensity} style={StyleSheet.absoluteFill} />
       </MaskedView>
       <View
         style={{
@@ -51,7 +65,7 @@ export function ProgressiveBlur({
           left: 0,
           right: 0,
           bottom: 0,
-          experimental_backgroundImage: `linear-gradient(to ${toEdge}, rgba(${rgb},0.70) 0%, rgba(${rgb},0.32) 42%, rgba(${rgb},0.08) 68%, rgba(${rgb},0) 88%)`,
+          experimental_backgroundImage: `linear-gradient(to ${toEdge}, ${colors.chromeScrim} 0%, rgba(${rgb},0.32) 42%, rgba(${rgb},0.08) 68%, rgba(${rgb},0) 88%)`,
         }}
       />
     </View>

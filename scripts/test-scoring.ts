@@ -5,6 +5,7 @@
  */
 
 import { tokenizePassage } from '@/lib/passage-text';
+import { speakingScore } from '@/lib/score';
 import { PassageAligner } from '@/services/alignment';
 import {
   mapAssessedWords,
@@ -334,6 +335,8 @@ section('buildAzureResult: Azure timings override the live pace and pauses');
   assertEq(withSegments!.paceWpm, 84, 'pace recomputed from Azure spans, not the live 42');
   assertEq(withSegments!.pauseCount, 1, 'the one real pause, not the live 99');
   assertEq(withSegments!.longestPauseMs, 1700, 'measured silence between words');
+  assertEq(withSegments!.overallScore, 0, 'six words is below the scoring floor');
+  assertEq(speakingScore(withSegments!), null, 'the shared definition gates six words out');
   assertEq(withSegments!.words[0].audioStartMs, 0, 'playback offset on the first word');
   assert(
     withSegments!.words[5].audioEndMs != null,

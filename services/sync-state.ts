@@ -191,6 +191,13 @@ export function markSettingsResolved() {
   emit();
 }
 
+/** Sign-out / account switch: the next signed-in user must wait on settings again. */
+export function resetSettingsResolved() {
+  if (!settingsResolved) return;
+  settingsResolved = false;
+  emit();
+}
+
 export function subscribeSyncState(listener: () => void): () => void {
   listeners.add(listener);
   return () => void listeners.delete(listener);

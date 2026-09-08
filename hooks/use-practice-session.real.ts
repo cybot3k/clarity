@@ -7,7 +7,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { File, Paths } from 'expo-file-system';
-import { Observe } from 'expo-observe';
+import { Observe } from '@/services/observe';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
@@ -108,6 +108,8 @@ type Machine = {
   meterEma: number;
   meterHistory: number[];
   result: SessionResult | null;
+  /** In-flight stop() so auto-complete and a user Stop share one pass. */
+  stopPromise: Promise<SessionResult> | null;
 };
 
 function deleteSegmentFiles(m: Machine) {
@@ -146,6 +148,7 @@ export function usePracticeSession(passage: Passage): PracticeSession {
   }
   const instanceId = instanceIdRef.current;
   const mounted = useRef(true);
+  const stopRef = useRef<(() => Promise<SessionResult>) | null>(null);
 
   const machineRef = useRef<Machine | null>(null);
   if (machineRef.current === null) {
@@ -173,6 +176,7 @@ export function usePracticeSession(passage: Passage): PracticeSession {
       meterEma: 0,
       meterHistory: [],
       result: null,
+      stopPromise: null,
     };
   }
   const activeMs = () => {
@@ -280,7 +284,7 @@ export function usePracticeSession(passage: Passage): PracticeSession {
     m.expectEnd = false;
     m.startedCount += 1;
     ExpoSpeechRecognitionModule.start({
-      lang: 'en-US',
+      lang: getAccentLocale(),
       interimResults: true,
       continuous: true,
       maxAlternatives: 5,
@@ -320,6 +324,7 @@ export function usePracticeSession(passage: Passage): PracticeSession {
     m.lastTransientError = null;
     m.meterHistory = [];
     m.result = null;
+    m.stopPromise = null;
     if (mounted.current) {
       setElapsedMs(0);
       setLiveWpm(0);
@@ -359,6 +364,10 @@ export function usePracticeSession(passage: Passage): PracticeSession {
       segments: best.segments,
     });
     flushLiveFrontier(m);
+    // Same stop() path the screen uses when the user taps Stop.
+    if (m.aligner.isComplete && m.status === 'listening' && !m.stopping) {
+      void stopRef.current?.();
+    }
   });
 
   useSpeechRecognitionEvent('speechstart', () => {
@@ -486,6 +495,9 @@ export function usePracticeSession(passage: Passage): PracticeSession {
         m.aligner.recordWpmSample(active);
         setLiveWpm(m.aligner.getLiveWpm(active));
         setFillerCount(m.aligner.fillerCount);
+      }
+      if (m.aligner.isComplete && !m.stopping) {
+        void stopRef.current?.();
       }
     }, TICK_MS);
     return () => clearInterval(interval);
@@ -780,68 +792,84 @@ export function usePracticeSession(passage: Passage): PracticeSession {
       async stop(): Promise<SessionResult> {
         const m = machineRef.current!;
         if (m.status === 'done' && m.result) return m.result;
-        // `resetMachine` mints a fresh sessionId, so this doubles as an epoch:
-        // if it changes while we're awaiting, a restart took the machine over
-        // and this stop must not touch it on the way out.
-        const epoch = m.sessionId;
-        m.expectEnd = true;
-        m.stopping = true;
-        setSpeechActive(m, false);
-        meterLevel.value = withTiming(0, { duration: 160 });
-        accumulate();
-        setStatusSafe('processing');
+        if (m.stopPromise) return m.stopPromise;
+
+        const run = (async (): Promise<SessionResult> => {
+          const current = machineRef.current!;
+          if (current.status === 'done' && current.result) return current.result;
+          // `resetMachine` mints a fresh sessionId, so this doubles as an epoch:
+          // if it changes while we're awaiting, a restart took the machine over
+          // and this stop must not touch it on the way out.
+          const epoch = current.sessionId;
+          current.expectEnd = true;
+          current.stopping = true;
+          setSpeechActive(current, false);
+          meterLevel.value = withTiming(0, { duration: 160 });
+          accumulate();
+          setStatusSafe('processing');
+          try {
+            ExpoSpeechRecognitionModule.stop();
+          } catch {
+            // already stopped
+          }
+          await waitForAudioQuiet(AUDIO_END_TIMEOUT_MS);
+
+          let finalResult: SessionResult;
+          try {
+            finalResult = await finishProcessing();
+          } catch (e) {
+            // Absolute last resort — never dead-end.
+            if (__DEV__) console.warn('[practice] processing failed entirely:', e);
+            Observe.reportError(e);
+            scoringDegraded({
+              reason: 'processing-failed',
+              locale: getAccentLocale(),
+              durationMs: Math.max(1, Math.round(current.accumulatedActiveMs)),
+            });
+            finalResult = buildLiveFallbackResult({
+              tokenized,
+              statuses: current.aligner.refWordStatuses(),
+              insertions: current.aligner.committedInsertions,
+              paceWpm: 0,
+              targetWpm: passage.targetWpm,
+              fillerCount: current.aligner.fillerCount,
+              discourseMarkerCount: current.aligner.discourseMarkerCount,
+              durationMs: Math.max(1, Math.round(current.accumulatedActiveMs)),
+              audioUri: null,
+              waveform: waveformFromMeterHistory(current.meterHistory),
+            });
+          }
+
+          // A restart superseded this attempt while we were awaiting. Hand the
+          // result back so the caller can still bank the partial attempt, but
+          // leave the machine alone: it now belongs to a live session, and
+          // forcing 'done' here would release the mic and delete the segment
+          // files out from under the read the user just started.
+          if (current.sessionId !== epoch) return finalResult;
+
+          current.result = finalResult;
+          if (mounted.current) setResult(finalResult);
+          setStatusSafe('done');
+          releaseEngine(instanceId);
+          // Segment files are merged into the full WAV — clean them up.
+          deleteSegmentFiles(current);
+          return finalResult;
+        })();
+
+        m.stopPromise = run;
         try {
-          ExpoSpeechRecognitionModule.stop();
-        } catch {
-          // already stopped
+          return await run;
+        } finally {
+          if (machineRef.current!.stopPromise === run) {
+            machineRef.current!.stopPromise = null;
+          }
         }
-        await waitForAudioQuiet(AUDIO_END_TIMEOUT_MS);
-
-        let finalResult: SessionResult;
-        try {
-          finalResult = await finishProcessing();
-        } catch (e) {
-          // Absolute last resort — never dead-end.
-          if (__DEV__) console.warn('[practice] processing failed entirely:', e);
-          Observe.reportError(e);
-          scoringDegraded({
-            reason: 'processing-failed',
-            locale: getAccentLocale(),
-            durationMs: Math.max(1, Math.round(m.accumulatedActiveMs)),
-          });
-          finalResult = buildLiveFallbackResult({
-            tokenized,
-            statuses: m.aligner.refWordStatuses(),
-            insertions: m.aligner.committedInsertions,
-            paceWpm: 0,
-            targetWpm: passage.targetWpm,
-            fillerCount: m.aligner.fillerCount,
-            discourseMarkerCount: m.aligner.discourseMarkerCount,
-            durationMs: Math.max(1, Math.round(m.accumulatedActiveMs)),
-            audioUri: null,
-            waveform: waveformFromMeterHistory(m.meterHistory),
-          });
-        }
-
-        // A restart superseded this attempt while we were awaiting. Hand the
-        // result back so the caller can still bank the partial attempt, but
-        // leave the machine alone: it now belongs to a live session, and
-        // forcing 'done' here would release the mic and delete the segment
-        // files out from under the read the user just started.
-        if (m.sessionId !== epoch) return finalResult;
-
-        m.result = finalResult;
-        if (mounted.current) setResult(finalResult);
-        setStatusSafe('done');
-        releaseEngine(instanceId);
-        // Segment files are merged into the full WAV — clean them up.
-        deleteSegmentFiles(m);
-        return finalResult;
       },
     };
     // machineRef/tokenized/passage are stable for the life of a session screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passage, tokenized, instanceId]);
+  stopRef.current = api.stop;
 
   return {
     status,

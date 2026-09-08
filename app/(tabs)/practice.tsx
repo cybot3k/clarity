@@ -85,10 +85,11 @@ export default function PracticeScreen() {
 
   return (
     <AtmosphereCanvas>
-    <Animated.ScrollView>
+    <Animated.ScrollView
       onScroll={onScroll}
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
       style={{ flex: 1 }}
       contentContainerStyle={{
         paddingTop: insets.top + spacing.xxl,
@@ -114,7 +115,11 @@ export default function PracticeScreen() {
         />
       </IntroReveal>
       <IntroReveal order={2} fade={false}>
-        <PassageCarousel items={recommendations.items} onStart={openContent} />
+        <PassageCarousel
+          items={recommendations.items}
+          onStart={openContent}
+          horizontalPadding={SCREEN_PADDING}
+        />
       </IntroReveal>
 
       {/* Drills */}
@@ -124,6 +129,7 @@ export default function PracticeScreen() {
       <IntroReveal order={4} fade={false}>
         <ScrollView
           horizontal
+          nestedScrollEnabled
           showsHorizontalScrollIndicator={false}
           style={styles.drillsRow}
           contentContainerStyle={styles.drillsContent}>

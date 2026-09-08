@@ -332,11 +332,8 @@ export function GlassTabBar({
             <AnimatedGlassView
               glassEffectStyle="regular"
               isInteractive
-              style={[
-                { backgroundColor: theme.glassTint, borderCurve: 'continuous' },
-                barStyle,
-                shapeStyle,
-              ]}>
+              tintColor={theme.glassTint}
+              style={[{ borderCurve: 'continuous' }, barStyle, shapeStyle]}>
               {barContent}
             </AnimatedGlassView>
           ) : (

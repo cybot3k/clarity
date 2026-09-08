@@ -344,21 +344,18 @@ section('scoring: azure aggregation + word mapping');
     assertEq(result.words[1].score, 45, 'mispronounced keeps azure score');
     // completeness capped by attempted/total = 5/6.
     assert(result.completeness <= 84, `completeness capped by omission (got ${result.completeness})`);
-    // The score is the mean of the five skills, not a weighted pron blend:
-    // accuracy 90, fluency 85, pace 100 (on target), fillers 40 (one filler over
-    // the 10s minimum duration → 6/min → 100 - 60), intonation 80 → 79.
-    assertEq(result.overallScore, 79, 'score is the mean of the five skills');
-    // `overallScore` is the raw formula. `speakingScore` additionally applies the
-    // eligibility gate, and this fixture speaks only five words, so it is
-    // excluded — the two agreeing unconditionally would mean the gate is not
-    // reaching the result path at all, which was the bug on the results screen.
+    // Five spoken words over 4s is below the scoring floor, so overallScore
+    // is 0 rather than the five-skill mean. The mean itself is still 79 once
+    // the session is lifted above the floor: accuracy 90, fluency 85, pace 100
+    // (on target), fillers 40 (one filler over the 10s minimum duration → 6/min
+    // → 100 - 60), intonation 80. 10s keeps the filler rate identical because
+    // fillerScore floors duration at 10s.
+    assertEq(result.overallScore, 0, 'below the scoring floor has no overall score');
     assertEq(speakingScore(result), null, 'the shared definition gates this fixture out');
-    // 10s keeps the filler rate identical (fillerScore floors duration at 10s),
-    // so the expected 79 is unchanged and only the gate flips.
     assertEq(
-      result.overallScore,
       speakingScore({ ...result, spokenWords: 40, durationMs: 10_000 }),
-      'builder and the shared score definition agree on a scorable session',
+      79,
+      'the five-skill mean is 79 on a scorable session',
     );
   }
 }
@@ -406,7 +403,8 @@ section('scoring: all-chunks-failed returns null; live fallback works');
     'live verdicts with filler spliced',
   );
   assertEq(live.completeness, 75, '3/4 matched → 75');
-  assert(live.overallScore > 0 && live.overallScore <= 100, 'overall in range');
+  assertEq(live.overallScore, 0, 'below the scoring floor has no overall score');
+  assertEq(speakingScore(live), null, 'live fallback is gated the same way');
   assert(live.intonation === 70, 'neutral intonation proxy');
 }
 

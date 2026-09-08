@@ -201,7 +201,7 @@ export default function AnalyticsScreen() {
           delta={summary.scoreDelta ?? undefined}
           deltaSuffix={DELTA_SUFFIXES[range]}
           points={chartPoints}
-          note={range === 2 ? 'Each bar is one week.' : undefined}
+          note={range === 2 ? 'Each point is one week.' : undefined}
         />
       </IntroReveal>
 
@@ -218,11 +218,11 @@ export default function AnalyticsScreen() {
 
       <IntroReveal order={5}>
         <SectionHeader
-          title={range === 0 ? 'This week' : range === 1 ? 'This month' : 'All time'}
+          title="Effort"
           subtitle={
             range === 2
-              ? `Your effort across ${windowDays} days of practice`
-              : `Your effort over the last ${windowDays} days`
+              ? `Across ${windowDays} days of practice`
+              : `Last ${windowDays} days · words mastered is all-time`
           }
         />
       </IntroReveal>
@@ -238,8 +238,12 @@ export default function AnalyticsScreen() {
               family="minutes"
               icon={Clock01Icon}
               label="Practice time"
-              value={summary.minutes}
-              unit="min"
+              value={
+                range === 2 && summary.minutes >= 60
+                  ? Math.round(summary.minutes / 60)
+                  : summary.minutes
+              }
+              unit={range === 2 && summary.minutes >= 60 ? 'h' : 'min'}
               delta={summary.minutesDelta ?? undefined}
               deltaSuffix="min"
             />

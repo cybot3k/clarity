@@ -23,7 +23,8 @@ const STROKE = 1.5;
 
 /**
  * Circular day letter. Home `goal` sits on atmosphereCanvas (inverse fill when
- * completed). Analytics `axis` sits on the hero foot (white selected pill).
+ * completed). Analytics `axis` sits on the navy hero (onAtmosphere ink, white
+ * selected pill).
  */
 export function DayChip({ intent, letter, filled, muted, progress, selected }: DayChipProps) {
   const { colors } = useTheme();
@@ -36,7 +37,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
       <View
         style={[
           styles.chip,
-          selected ? { backgroundColor: colors.card } : null,
+          selected ? { backgroundColor: colors.cursorDot } : null,
         ]}>
         {!selected ? (
           <Svg width={d} height={d} style={StyleSheet.absoluteFill}>
@@ -45,12 +46,14 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
               cy={c}
               r={r}
               fill="none"
-              stroke={colors.foreground}
+              stroke={colors.onAtmosphere}
               strokeWidth={STROKE}
             />
           </Svg>
         ) : null}
-        <ThemedText variant="micro">{letter}</ThemedText>
+        <ThemedText variant="micro" tone={selected ? 'axisChip' : 'onAtmosphere'}>
+          {letter}
+        </ThemedText>
       </View>
     );
   }

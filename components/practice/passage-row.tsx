@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AtmosphereSurface, ThemedText } from '@/components/ui';
 import { SKILL_LABELS } from '@/constants/metrics';
 import { radius, spacing } from '@/constants/theme';
+import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
 import type { Passage } from '@/types/session';
 
@@ -14,24 +15,29 @@ const THUMB_SIZE = 56;
 /** Small square of the passage's card artwork (same gradient technique as
  * PassageCard, minus the text-legibility bed). */
 function ArtworkThumb({ artwork }: { artwork: Passage['artwork'] }) {
+  const { reduced } = useAtmospherePrefs();
   return (
-    <View style={styles.thumb}>
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            experimental_backgroundImage: `linear-gradient(to bottom, ${artwork.base[0]} 0%, ${artwork.base[1]} 100%)`,
-          },
-        ]}
-      />
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            experimental_backgroundImage: `radial-gradient(ellipse ${THUMB_SIZE}px ${THUMB_SIZE}px at 100% 0%, ${artwork.blob[0]} 0%, ${artwork.blob[1]} 40%, transparent 100%)`,
-          },
-        ]}
-      />
+    <View style={[styles.thumb, { backgroundColor: artwork.base[0] }]}>
+      {reduced ? null : (
+        <>
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                experimental_backgroundImage: `linear-gradient(to bottom, ${artwork.base[0]} 0%, ${artwork.base[1]} 100%)`,
+              },
+            ]}
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                experimental_backgroundImage: `radial-gradient(ellipse ${THUMB_SIZE}px ${THUMB_SIZE}px at 100% 0%, ${artwork.blob[0]} 0%, ${artwork.blob[1]} 40%, transparent 100%)`,
+              },
+            ]}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -90,7 +96,7 @@ export function AddPassageRow({ onPress }: { onPress: () => void }) {
       style={({ pressed }) => pressed && styles.pressed}>
       <AtmosphereSurface mesh="add" radius="lg" dotted style={styles.addBorder}>
         <View style={styles.addRow}>
-          <View style={[styles.thumb, styles.addThumb]}>
+          <View style={[styles.thumb, styles.addThumb, { borderColor: colors.outline }]}>
             <HugeiconsIcon
               icon={PlusSignIcon}
               size={22}
@@ -138,7 +144,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   addThumb: {
-    borderWidth: 1.5,
+    borderWidth: spacing.xxs,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',

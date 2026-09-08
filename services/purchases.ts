@@ -14,16 +14,45 @@
  */
 
 import { Platform } from 'react-native';
-import Purchases, {
-  LOG_LEVEL,
-  PURCHASES_ERROR_CODE,
-  type CustomerInfo,
-  type PurchasesError,
-  type PurchasesOffering,
-  type PurchasesPackage,
+import type {
+  CustomerInfo,
+  PurchasesError,
+  PurchasesOffering,
+  PurchasesPackage,
 } from 'react-native-purchases';
 
 import { isPro } from '@/lib/entitlements';
+import { isExpoGo } from '@/services/runtime';
+
+type PurchasesNS = typeof import('react-native-purchases');
+
+let Purchases: PurchasesNS['default'] | null = null;
+let LOG_LEVEL: PurchasesNS['LOG_LEVEL'] | null = null;
+let PURCHASES_ERROR_CODE: PurchasesNS['PURCHASES_ERROR_CODE'] | null = null;
+
+function loadPurchasesNative(): boolean {
+  if (Purchases) return true;
+  if (isExpoGo()) return false;
+  try {
+    const mod = require('react-native-purchases') as PurchasesNS;
+    const sdk = (mod.default ?? mod) as PurchasesNS['default'];
+    if (typeof sdk?.configure !== 'function') return false;
+    Purchases = sdk;
+    LOG_LEVEL = mod.LOG_LEVEL;
+    PURCHASES_ERROR_CODE = mod.PURCHASES_ERROR_CODE;
+    return true;
+  } catch (error) {
+    console.warn('[purchases] RevenueCat native module unavailable', error);
+    return false;
+  }
+}
+
+function requirePurchases(): PurchasesNS['default'] {
+  if (!Purchases) {
+    throw new Error('RevenueCat is not configured');
+  }
+  return Purchases;
+}
 
 /**
  * RevenueCat Test Store key.
@@ -97,6 +126,11 @@ export function configurePurchases(): PurchasesAvailability {
     return availability;
   }
 
+  if (!loadPurchasesNative() || !Purchases || !LOG_LEVEL) {
+    availability = { available: false, reason: 'configureFailed' };
+    return availability;
+  }
+
   const resolved = resolveApiKey();
   if (!resolved) {
     console.warn(
@@ -115,9 +149,9 @@ export function configurePurchases(): PurchasesAvailability {
   try {
     // Set before configure() so configuration itself is logged. The promise is
     // fire and forget: losing a log level is never worth failing setup over.
-    Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR).catch(() => {});
+    requirePurchases().setLogLevel(__DEV__ ? LOG_LEVEL!.DEBUG : LOG_LEVEL!.ERROR).catch(() => {});
 
-    Purchases.configure({
+    requirePurchases().configure({
       apiKey: resolved.apiKey,
       // No account system yet, so the SDK generates and persists an anonymous
       // app user id. When sign-in lands, call `identifyPurchaser` after login
@@ -127,7 +161,7 @@ export function configurePurchases(): PurchasesAvailability {
       // `entitlement.verification` without ever withholding access. Informational
       // is the safe default: a verification outage degrades to granting the
       // entitlement rather than locking out paying customers.
-      entitlementVerificationMode: Purchases.ENTITLEMENT_VERIFICATION_MODE.INFORMATIONAL,
+      entitlementVerificationMode: requirePurchases().ENTITLEMENT_VERIFICATION_MODE.INFORMATIONAL,
     });
   } catch (cause) {
     console.warn(
@@ -169,26 +203,31 @@ export function describePurchasesError(error: unknown): string {
     return 'Something went wrong. Please try again.';
   }
 
+  const codes = PURCHASES_ERROR_CODE;
+  if (!codes) {
+    return error.message || 'Something went wrong. Please try again.';
+  }
+
   switch (error.code) {
-    case PURCHASES_ERROR_CODE.NETWORK_ERROR:
-    case PURCHASES_ERROR_CODE.OFFLINE_CONNECTION_ERROR:
+    case codes.NETWORK_ERROR:
+    case codes.OFFLINE_CONNECTION_ERROR:
       return 'You appear to be offline. Check your connection and try again.';
-    case PURCHASES_ERROR_CODE.PURCHASE_NOT_ALLOWED_ERROR:
+    case codes.PURCHASE_NOT_ALLOWED_ERROR:
       return 'Purchases are not allowed on this device. Check your device restrictions.';
-    case PURCHASES_ERROR_CODE.PRODUCT_ALREADY_PURCHASED_ERROR:
+    case codes.PRODUCT_ALREADY_PURCHASED_ERROR:
       return 'You already own this. Try Restore Purchases to unlock it here.';
-    case PURCHASES_ERROR_CODE.RECEIPT_ALREADY_IN_USE_ERROR:
+    case codes.RECEIPT_ALREADY_IN_USE_ERROR:
       return 'This purchase is already tied to another account.';
-    case PURCHASES_ERROR_CODE.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+    case codes.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
       return 'That plan is not available right now. Please try again later.';
-    case PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR:
+    case codes.PAYMENT_PENDING_ERROR:
       return 'Your payment is still processing. Pro unlocks as soon as it clears.';
-    case PURCHASES_ERROR_CODE.INELIGIBLE_ERROR:
+    case codes.INELIGIBLE_ERROR:
       return 'You are not eligible for that offer.';
-    case PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR:
+    case codes.STORE_PROBLEM_ERROR:
       return 'The store is having trouble. Please try again in a moment.';
-    case PURCHASES_ERROR_CODE.CONFIGURATION_ERROR:
-    case PURCHASES_ERROR_CODE.INVALID_CREDENTIALS_ERROR:
+    case codes.CONFIGURATION_ERROR:
+    case codes.INVALID_CREDENTIALS_ERROR:
       // A setup mistake, not something the customer can fix. Say so plainly
       // and let the dashboard logs carry the detail.
       return 'Purchases are not set up correctly. Please try again later.';
@@ -198,7 +237,11 @@ export function describePurchasesError(error: unknown): string {
 }
 
 function isCancellation(error: unknown): boolean {
-  return isPurchasesError(error) && error.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR;
+  return (
+    isPurchasesError(error) &&
+    PURCHASES_ERROR_CODE != null &&
+    error.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +260,7 @@ function isCancellation(error: unknown): boolean {
  */
 export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> {
   if (!isConfigured()) return null;
-  const offerings = await Purchases.getOfferings();
+  const offerings = await requirePurchases().getOfferings();
   return offerings.current;
 }
 
@@ -225,7 +268,7 @@ export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> 
  * default (a win-back offer, an onboarding-only discount). */
 export async function fetchOffering(identifier: string): Promise<PurchasesOffering | null> {
   if (!isConfigured()) return null;
-  const offerings = await Purchases.getOfferings();
+  const offerings = await requirePurchases().getOfferings();
   return offerings.all[identifier] ?? null;
 }
 
@@ -256,11 +299,15 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<PurchaseOu
   }
 
   try {
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    const { customerInfo } = await requirePurchases().purchasePackage(pkg);
     return { outcome: 'purchased', customerInfo };
   } catch (error) {
     if (isCancellation(error)) return { outcome: 'cancelled' };
-    if (isPurchasesError(error) && error.code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR) {
+    if (
+      isPurchasesError(error) &&
+      PURCHASES_ERROR_CODE != null &&
+      error.code === PURCHASES_ERROR_CODE.PAYMENT_PENDING_ERROR
+    ) {
       return { outcome: 'pending' };
     }
     console.warn('[purchases] purchase failed', error);
@@ -286,7 +333,7 @@ export async function restorePurchases(): Promise<RestoreOutcome> {
   }
 
   try {
-    const customerInfo = await Purchases.restorePurchases();
+    const customerInfo = await requirePurchases().restorePurchases();
     return isPro(customerInfo)
       ? { outcome: 'restored', customerInfo }
       : { outcome: 'nothingToRestore', customerInfo };
@@ -307,7 +354,7 @@ export async function restorePurchases(): Promise<RestoreOutcome> {
  */
 export async function fetchCustomerInfo(): Promise<CustomerInfo | null> {
   if (!isConfigured()) return null;
-  return Purchases.getCustomerInfo();
+  return requirePurchases().getCustomerInfo();
 }
 
 /**
@@ -321,9 +368,9 @@ export async function fetchCustomerInfo(): Promise<CustomerInfo | null> {
  */
 export function onCustomerInfoChange(listener: (info: CustomerInfo) => void): () => void {
   if (!isConfigured()) return () => {};
-  Purchases.addCustomerInfoUpdateListener(listener);
+  requirePurchases().addCustomerInfoUpdateListener(listener);
   return () => {
-    Purchases.removeCustomerInfoUpdateListener(listener);
+    requirePurchases().removeCustomerInfoUpdateListener(listener);
   };
 }
 
@@ -337,8 +384,8 @@ export function onCustomerInfoChange(listener: (info: CustomerInfo) => void): ()
  */
 export async function refreshCustomerInfo(): Promise<CustomerInfo | null> {
   if (!isConfigured()) return null;
-  await Purchases.invalidateCustomerInfoCache();
-  return Purchases.getCustomerInfo();
+  await requirePurchases().invalidateCustomerInfoCache();
+  return requirePurchases().getCustomerInfo();
 }
 
 // ---------------------------------------------------------------------------
@@ -359,11 +406,11 @@ export async function refreshCustomerInfo(): Promise<CustomerInfo | null> {
  */
 export async function identifyPurchaser(appUserID: string): Promise<CustomerInfo | null> {
   if (!isConfigured()) return null;
-  const { customerInfo } = await Purchases.logIn(appUserID);
+  const { customerInfo } = await requirePurchases().logIn(appUserID);
   return customerInfo;
 }
 
 export async function forgetPurchaser(): Promise<CustomerInfo | null> {
   if (!isConfigured()) return null;
-  return Purchases.logOut();
+  return requirePurchases().logOut();
 }

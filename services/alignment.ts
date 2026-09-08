@@ -25,12 +25,15 @@
 import { DISCOURSE_MARKERS, FILLER_BIGRAMS, FILLER_UNIGRAMS } from '@/lib/fillers';
 import { normalizeToken, type TokenizedPassage } from '@/lib/passage-text';
 
-/** Kept as a public compatibility constant for the self-tests and callers. */
+/** Consecutive reference words the DP may skip to land a later match. */
 export const SKIP_TOLERANCE = 4;
 
-const ALIGNMENT_LOOKAHEAD = 12;
+const ALIGNMENT_LOOKAHEAD = SKIP_TOLERANCE;
 const INSERTION_COST = 0.92;
-const DELETION_COST = 0.78;
+// SKIP_TOLERANCE deletions must beat one insertion, or a 2–4 word omission
+// is scored as a ganz insertion instead of skipped refs + a later match.
+// 4 × 0.2 = 0.80 < 0.92; 5 × 0.2 = 1.00 > 0.92.
+const DELETION_COST = INSERTION_COST / (SKIP_TOLERANCE + 0.6);
 const SUBSTITUTION_COST = 1.62;
 
 const WPM_WINDOW_MS = 15_000;
@@ -375,7 +378,9 @@ export class PassageAligner {
         if (i < pendingTokens.length) {
           update(i + 1, j, cell.cost + INSERTION_COST, i, j, { kind: 'insert' });
         }
-        if (j < references.length) {
+        // j - i is how far the reference cursor is ahead of the transcript.
+        // Cap that gap at SKIP_TOLERANCE so a jump of 5+ words cannot match.
+        if (j < references.length && j - i < SKIP_TOLERANCE) {
           update(i, j + 1, cell.cost + DELETION_COST, i, j, { kind: 'delete' });
         }
         if (i < pendingTokens.length && j < references.length) {

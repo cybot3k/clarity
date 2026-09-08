@@ -1,14 +1,36 @@
 import { Crown02Icon, FireIcon, Settings01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassContainer, GlassView } from 'expo-glass-effect';
+import { GlassContainer, GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useTheme } from '@/hooks/use-theme';
+
+function HeaderCapsule({
+  style,
+  children,
+}: {
+  style: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  if (!isLiquidGlassAvailable()) {
+    return <View style={[style, { backgroundColor: colors.frostFallback }]}>{children}</View>;
+  }
+  return (
+    <GlassView
+      glassEffectStyle="regular"
+      isInteractive
+      tintColor={colors.glassTintStrong}
+      style={style}>
+      {children}
+    </GlassView>
+  );
+}
 
 function proButtonLabel(isLoading: boolean, isPro: boolean): string {
   if (isLoading) return 'Checking your subscription';
@@ -63,7 +85,7 @@ export function HeaderActions({ streak }: { streak: number }) {
         accessibilityState={{ disabled: isLoading }}
         accessibilityLabel={proButtonLabel(isLoading, access.isPro)}
         accessibilityHint={`Current streak: ${streak}`}>
-        <GlassView isInteractive style={[styles.streak, { backgroundColor: colors.frostFallback }]}>
+        <HeaderCapsule style={styles.streak}>
           <HugeiconsIcon
             icon={access.isPro ? Crown02Icon : FireIcon}
             size={24}
@@ -72,12 +94,12 @@ export function HeaderActions({ streak }: { streak: number }) {
           <ThemedText variant="callout" weight="medium">
             {streak}
           </ThemedText>
-        </GlassView>
+        </HeaderCapsule>
       </Pressable>
       <Pressable onPress={openSettings} accessibilityRole="button" accessibilityLabel="Settings">
-        <GlassView isInteractive style={[styles.cog, { backgroundColor: colors.frostFallback }]}>
+        <HeaderCapsule style={styles.cog}>
           <HugeiconsIcon icon={Settings01Icon} size={24} color={colors.tertiary} />
-        </GlassView>
+        </HeaderCapsule>
       </Pressable>
     </GlassContainer>
   );

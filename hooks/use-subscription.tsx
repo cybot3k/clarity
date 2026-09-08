@@ -19,7 +19,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Observe } from 'expo-observe';
+import { Observe } from '@/services/observe';
 
 import { NO_PRO_ACCESS, readProAccess, type ProAccess } from '@/lib/entitlements';
 import { setSubscriptionTier } from '@/services/observe-events';

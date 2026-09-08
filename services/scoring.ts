@@ -554,8 +554,10 @@ export function buildAzureResult(
   const pauseCount = azurePauses?.pauseCount ?? params.pauseCount ?? null;
   const longestPauseMs = azurePauses?.longestPauseMs ?? params.longestPauseMs ?? null;
 
-  // The score is the mean of the five skills below it (see lib/score.ts), so
-  // the hero number always reconciles with the skill rows the UI prints.
+  // spokenWords has to be on the object speakingScore sees. Without it,
+  // isScorable grandfathers a missing count and the scoring floor never
+  // applies — a silent take then stores a confident 60–80.
+  const spokenWords = spokenWordCount(words);
   const scored = {
     accuracy,
     fluency,
@@ -566,6 +568,7 @@ export function buildAzureResult(
     fillerCount: params.fillerCount,
     durationMs: params.durationMs,
     source: 'azure',
+    spokenWords,
   } as const;
 
   return {
@@ -573,7 +576,6 @@ export function buildAzureResult(
     overallScore: speakingScore(scored) ?? 0,
     discourseMarkerCount: params.discourseMarkerCount,
     words,
-    spokenWords: spokenWordCount(words),
     audioUri: params.audioUri,
     waveform: params.waveform,
     pauseCount,
@@ -611,6 +613,7 @@ export function buildLiveFallbackResult(params: ResultBuildParams): SessionResul
   // `source: 'live'` makes sessionSkills drop intonation, so the placeholder 70
   // above never reaches the score — it scores on Articulation, Flow, Pacing,
   // and Fillers.
+  const spokenWords = spokenWordCount(words);
   const scored = {
     accuracy,
     fluency,
@@ -621,6 +624,7 @@ export function buildLiveFallbackResult(params: ResultBuildParams): SessionResul
     fillerCount: params.fillerCount,
     durationMs: params.durationMs,
     source: 'live',
+    spokenWords,
   } as const;
 
   return {
@@ -628,7 +632,6 @@ export function buildLiveFallbackResult(params: ResultBuildParams): SessionResul
     overallScore: speakingScore(scored) ?? 0,
     discourseMarkerCount: params.discourseMarkerCount,
     words,
-    spokenWords: spokenWordCount(words),
     audioUri: params.audioUri,
     waveform: params.waveform,
     pauseCount: params.pauseCount ?? null,
@@ -664,6 +667,9 @@ export function buildFreestyleResult(params: FreestyleResultParams): SessionResu
   // `mode: 'freestyle'` plus `source: 'live'` makes sessionSkills drop both
   // accuracy and intonation, so the 0 and the placeholder 70 below never reach
   // the score — freestyle scores on Flow, Pacing, and Fillers alone.
+  // No reference text, so the committed transcript is the only evidence of
+  // what was actually said.
+  const spokenWords = params.transcript.trim().split(/\s+/).filter(Boolean).length;
   const scored = {
     mode: 'freestyle',
     accuracy: 0,
@@ -675,6 +681,7 @@ export function buildFreestyleResult(params: FreestyleResultParams): SessionResu
     fillerCount: params.fillerCount,
     durationMs: params.durationMs,
     source: 'live',
+    spokenWords,
   } as const;
 
   return {
@@ -683,9 +690,6 @@ export function buildFreestyleResult(params: FreestyleResultParams): SessionResu
     discourseMarkerCount: params.discourseMarkerCount,
     transcript: params.transcript,
     words: [],
-    // No reference text, so the committed transcript is the only evidence of
-    // what was actually said.
-    spokenWords: params.transcript.trim().split(/\s+/).filter(Boolean).length,
     audioUri: params.audioUri,
     waveform: params.waveform,
     // Freestyle keeps only per-utterance finals, with no per-word commits, so

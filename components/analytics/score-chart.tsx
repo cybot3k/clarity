@@ -42,26 +42,47 @@ function yFor(score: number, height: number): number {
   return PAD_TOP + (1 - score / 100) * (height - PAD_TOP - PAD_BOTTOM);
 }
 
-/** Catmull-Rom through scored points, cubic segments. Gaps break the path. */
+type ChartMark = {
+  key: string;
+  x: number;
+  y: number;
+  kind: 'vertex' | 'unscored';
+  partial: boolean;
+};
+
+/** Catmull-Rom through scored points, cubic segments. Gaps break the path.
+ * A 1-point run is a vertex, not `M x y` (a move with no stroke). Practiced
+ * but unscored buckets get a hollow baseline mark so they are not rest. */
 function curvePath(
   points: readonly ScoreChartPoint[],
   width: number,
   height: number,
-): { full: string; partial: string } {
+): { full: string; partial: string; marks: ChartMark[] } {
   const n = points.length;
-  if (n === 0 || width <= 0) return { full: '', partial: '' };
+  if (n === 0 || width <= 0) return { full: '', partial: '', marks: [] };
   const step = width / Math.max(n, 1);
-  const pts = points.map((p, i) =>
-    p.score == null ? null : { x: step * (i + 0.5), y: yFor(p.score, height), partial: p.skillCount < SKILL_ORDER.length },
-  );
+  const pts = points.map((p, i) => ({
+    key: p.key,
+    x: step * (i + 0.5),
+    y: p.score == null ? null : yFor(p.score, height),
+    partial: p.skillCount < SKILL_ORDER.length,
+    sessions: p.sessions,
+  }));
 
   const segs: { d: string; partial: boolean }[] = [];
-  let run: { x: number; y: number; partial: boolean }[] = [];
+  const marks: ChartMark[] = [];
+  let run: { key: string; x: number; y: number; partial: boolean }[] = [];
 
   const flush = () => {
     if (run.length === 0) return;
     if (run.length === 1) {
-      segs.push({ d: `M ${run[0].x} ${run[0].y}`, partial: run[0].partial });
+      marks.push({
+        key: run[0].key,
+        x: run[0].x,
+        y: run[0].y,
+        kind: 'vertex',
+        partial: run[0].partial,
+      });
     } else {
       let d = `M ${run[0].x} ${run[0].y}`;
       for (let i = 0; i < run.length - 1; i++) {
@@ -81,14 +102,27 @@ function curvePath(
   };
 
   for (const p of pts) {
-    if (p == null) flush();
-    else run.push(p);
+    if (p.y == null) {
+      flush();
+      if (p.sessions > 0) {
+        marks.push({
+          key: p.key,
+          x: p.x,
+          y: yFor(0, height),
+          kind: 'unscored',
+          partial: false,
+        });
+      }
+    } else {
+      run.push({ key: p.key, x: p.x, y: p.y, partial: p.partial });
+    }
   }
   flush();
 
   return {
     full: segs.filter((s) => !s.partial).map((s) => s.d).join(' '),
     partial: segs.filter((s) => s.partial).map((s) => s.d).join(' '),
+    marks,
   };
 }
 
@@ -99,12 +133,14 @@ function curvePath(
 export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
   const { colors } = useTheme();
   const chartWidth = useSharedValue(0);
+  const bucketCount = useSharedValue(points.length);
   const panning = useSharedValue(false);
   const holding = useSharedValue(false);
   const lastIndex = useSharedValue(-1);
   const widthRef = useRef(0);
   const pointsRef = useRef(points);
   pointsRef.current = points;
+  bucketCount.value = points.length;
 
   const focusIndex = useCallback(
     (index: number) => {
@@ -118,16 +154,17 @@ export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
   );
 
   const endScrub = useCallback(() => {
+    lastIndex.value = -1;
     setCursorKey(null);
     onScrub?.(null);
-  }, [onScrub]);
+  }, [lastIndex, onScrub]);
 
   useEffect(() => endScrub(), [points, endScrub]);
 
   const gesture = useMemo(() => {
     const scrubTo = (x: number) => {
       'worklet';
-      const index = bucketAt(x, chartWidth.value, pointsRef.current.length);
+      const index = bucketAt(x, chartWidth.value, bucketCount.value);
       if (index < 0 || index === lastIndex.value) return;
       lastIndex.value = index;
       runOnJS(focusIndex)(index);
@@ -168,7 +205,7 @@ export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
       });
 
     return Gesture.Simultaneous(pan, hold);
-  }, [chartWidth, endScrub, focusIndex, holding, lastIndex, panning]);
+  }, [bucketCount, chartWidth, endScrub, focusIndex, holding, lastIndex, panning]);
 
   const [width, setWidth] = useState(0);
   const [cursorKey, setCursorKey] = useState<string | null>(null);
@@ -241,6 +278,27 @@ export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
                   strokeDasharray={dash}
                 />
               ) : null}
+              {paths.marks.map((mark) =>
+                mark.kind === 'vertex' ? (
+                  <Circle
+                    key={mark.key}
+                    cx={mark.x}
+                    cy={mark.y}
+                    r={atmosphere.chartVertexSize / 2}
+                    fill={mark.partial ? colors.chartPartial : colors.chartLine}
+                  />
+                ) : (
+                  <Circle
+                    key={mark.key}
+                    cx={mark.x}
+                    cy={mark.y}
+                    r={atmosphere.chartUnscoredSize / 2}
+                    fill="none"
+                    stroke={colors.chartPartial}
+                    strokeWidth={atmosphere.dottedWidth}
+                  />
+                ),
+              )}
               {cursor ? (
                 <>
                   <Circle

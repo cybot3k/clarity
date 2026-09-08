@@ -471,7 +471,10 @@ section('dayKeyAt / recordDayKey (timezone-stable bucketing)');
   assertEq(recordDayKey(practiced), '2026-01-05', 'the record keeps its Berlin day');
 
   // A streak spanning a westward flight neither breaks nor double-counts.
-  const anchor = new Date(2026, 0, 10, 12, 0, 0).getTime();
+  // UTC noon, not `new Date(y, m, d, 12)` — that constructor is the machine's
+  // local zone, and on IST the -120 / 480 offsets collapsed two of these
+  // instants onto the same calendar day.
+  const anchor = Date.UTC(2026, 0, 10, 12, 0, 0);
   const flight = [
     rec({ completedAt: anchor - 2 * DAY, tzOffsetMinutes: -120 }),
     rec({ completedAt: anchor - DAY, tzOffsetMinutes: 480 }),

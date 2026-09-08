@@ -102,6 +102,10 @@ const light = {
   onArtworkMuted: 'rgba(255,255,255,0.75)',
   /** Translucent white bed for a control sitting on artwork. */
   artworkFill: 'rgba(255,255,255,0.22)',
+  /** Mid stop of the artwork-card text-legibility scrim. Scheme-invariant. */
+  artworkScrim: 'rgba(0,0,0,0.38)',
+  /** Bottom stop of the artwork-card text-legibility scrim. Scheme-invariant. */
+  artworkScrimStrong: 'rgba(0,0,0,0.68)',
 
   // --- Atmospheric Glass (additive; existing keys above are unchanged) ---
   atmosphereCanvas: '#EEF2F7',
@@ -126,6 +130,8 @@ const light = {
   chartGrid: 'rgba(255,255,255,0.22)',
   cursorRing: 'rgba(255,255,255,0.55)',
   cursorDot: '#FFFFFF',
+  /** Letter on a selected axis DayChip (`cursorDot` fill). Always dark — `foreground` goes white in dark. */
+  axisChipInk: '#111114',
   chartPartial: 'rgba(255,255,255,0.40)',
 
   metricMinutesFrom: '#7A3A12',
@@ -164,6 +170,8 @@ const light = {
   addLeakHot: 'rgba(245,230,200,0.85)',
 
   frostFallback: 'rgba(247,250,253,0.92)',
+  /** Peak stop of the fade under floating chrome (tab bar, session bars). */
+  chromeScrim: 'rgba(255,255,255,0.70)',
 
   atmosphereAccent: '#1A8A9A',
   atmosphereAccentFaded: '#A9E4EC',
@@ -221,6 +229,8 @@ const dark: Record<keyof typeof light, string> = {
   onArtwork: '#FFFFFF',
   onArtworkMuted: 'rgba(255,255,255,0.75)',
   artworkFill: 'rgba(255,255,255,0.22)',
+  artworkScrim: 'rgba(0,0,0,0.38)',
+  artworkScrimStrong: 'rgba(0,0,0,0.68)',
 
   atmosphereCanvas: '#071018',
   canvasFog: 'rgba(90,212,228,0.18)',
@@ -244,6 +254,7 @@ const dark: Record<keyof typeof light, string> = {
   chartGrid: 'rgba(255,255,255,0.18)',
   cursorRing: 'rgba(255,255,255,0.50)',
   cursorDot: '#FFFFFF',
+  axisChipInk: '#111114',
   chartPartial: 'rgba(255,255,255,0.35)',
 
   metricMinutesFrom: '#4A220A',
@@ -282,6 +293,7 @@ const dark: Record<keyof typeof light, string> = {
   addLeakHot: 'rgba(180,150,100,0.40)',
 
   frostFallback: 'rgba(14,24,34,0.94)',
+  chromeScrim: 'rgba(0,0,0,0.70)',
 
   atmosphereAccent: '#5AD4E4',
   atmosphereAccentFaded: '#1A4A55',

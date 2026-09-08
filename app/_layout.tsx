@@ -1,10 +1,15 @@
 import { ClerkProvider, useAuth } from "@clerk/expo";
 import { resourceCache } from "@clerk/expo/resource-cache";
-import { tokenCache } from "@clerk/expo/token-cache";
+import { tokenCache } from "@/services/clerk-token-cache";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useFonts } from "expo-font";
-import { Observe, ObserveErrorBoundary, ObserveRoot } from "expo-observe";
+import {
+  Observe,
+  ObserveErrorBoundary,
+  ObserveRoot,
+  canObserve,
+} from "@/services/observe";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { Stack } from "expo-router/stack";
 import { StatusBar } from "expo-status-bar";
@@ -12,8 +17,10 @@ import * as SystemUI from "expo-system-ui";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { Platform } from "react-native";
 
 import { AuthBridge } from "@/components/auth-bridge";
+import "@/services/oauth";
 import { ConvexSync } from "@/components/convex-sync";
 import { ProgressiveBlur } from "@/components/glass-tabs";
 import { ObserveErrorFallback } from "@/components/observe-error-fallback";
@@ -44,7 +51,7 @@ import {
  * the wiring; it has no effect on release builds.
  */
 Observe.configure({
-  integrations: { "expo-router": true },
+  integrations: { "expo-router": canObserve },
   dispatchInDebug: process.env.EXPO_PUBLIC_OBSERVE_IN_DEV === "1",
 });
 
@@ -172,9 +179,9 @@ function NavThemeProvider({ children }: { children: ReactNode }) {
 function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { onboardingCompletedAt } = useSettings();
-  const signedIn = isLoaded
-    ? isSignedIn === true
-    : getLastSignedInUserId() !== null;
+
+  const signedIn =
+    isSignedIn === true || getLastSignedInUserId() !== null;
   const onboarded = onboardingCompletedAt != null;
 
   const blurHeader = {
@@ -193,8 +200,6 @@ function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      {/* A one-way corridor at the root: no swipe back toward sign-in. Movement
-          between steps is the nested stack's business. */}
       <Stack.Protected guard={signedIn && !onboarded}>
         <Stack.Screen
           name="(onboarding)"
@@ -202,30 +207,20 @@ function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
         />
       </Stack.Protected>
 
-      {/* Every existing screen, modals included: a signed-out deep link to
-          /settings or /paywall must not resolve. */}
       <Stack.Protected guard={signedIn && onboarded}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="session"
           options={{ presentation: "fullScreenModal", headerShown: false }}
         />
-        {/* Keeps its native header: a custom left-placed title and the close
-            button live in the stack toolbar (Stack.Toolbar inside the route).
-            The shared progressive blur lets the form scroll beneath the toolbar
-            without introducing a hard material edge. */}
         <Stack.Screen
           name="passage-editor"
           options={{ presentation: "modal", ...blurHeader }}
         />
-        {/* Same native-header treatment as the passage editor. */}
         <Stack.Screen
           name="settings"
           options={{ presentation: "modal", ...blurHeader }}
         />
-        {/* Both draw their own close button and their own scrolling (the
-            paywall is ours, the Customer Center is a RevenueCat-hosted native
-            view), so they take the whole modal with no header of ours on top. */}
         <Stack.Screen
           name="paywall"
           options={{ presentation: "modal", headerShown: false }}
@@ -236,100 +231,92 @@ function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
         />
       </Stack.Protected>
 
-      {/* Was undeclared, and therefore auto-added and reachable in every build.
-          QA deep-links to it before signing in, so it sits outside the auth
-          guards; the flag removes it from the tree everywhere else. */}
       <Stack.Protected guard={SEED_ENABLED}>
         <Stack.Screen name="dev-seed" options={{ headerShown: false }} />
       </Stack.Protected>
+
+      <Stack.Screen name="sso-callback" options={{ headerShown: false }} />
     </Stack>
   );
 }
 
-function RootLayout() {
-  // Expo Go can't embed fonts at build time, so load them here. The splash
-  // overlay needs no fonts, so it plays over the wait — only the routes
-  // beneath it hold for the font load.
-  const [fontsReady, fontError] = useFonts(fontAssets);
+function AppShell({
+  fontsReady,
+  fontError,
+}: {
+  fontsReady: boolean;
+  fontError: Error | null;
+}) {
   const { scheme } = useTheme();
-  // revealed flips when the splash logo ends (content starts staggering in
-  // beneath the fade); splashDone flips when the fade completes (overlay unmounts).
-  const { revealed, setRevealed, splashDone, setSplashDone } = useIntroReveal();
-
-  // The fresh-install hold. `onboardingCompletedAt` is null both for a brand
-  // new user and for a returning user on a new device, and only the account's
-  // settings can tell them apart. Until they answer (or Clerk says signed out,
-  // or the bounded wait in ConvexSync expires) the splash stays on its last
-  // frame and the navigator waits, so a returning user never sees onboarding
-  // for a beat. Every later launch has the local value and never waits.
-  // Confined to the splash on purpose: after it, a hold would blank the app.
+  const { revealed, setRevealed, splashDone, setSplashDone } =
+    useIntroReveal();
   const { onboardingCompletedAt } = useSettings();
+  const { isLoaded: clerkLoaded } = useAuth();
+
   const settingsResolved = useSyncExternalStore(
     subscribeSyncState,
     getSettingsResolved,
     getSettingsResolved,
   );
-  const holdGate = !splashDone && onboardingCompletedAt == null && !settingsResolved;
+
+  const restoringSession =
+    !clerkLoaded && getLastSignedInUserId() !== null;
+
+  const holdGate =
+    !splashDone &&
+    (restoringSession ||
+      (onboardingCompletedAt == null && !settingsResolved));
+
+  return (
+    <>
+      <AuthBridge />
+      <ConvexSync />
+      <SubscriptionProvider>
+        <AppReadyProvider value={splashDone}>
+          <IntroRevealProvider value={revealed}>
+            <NavThemeProvider>
+              {(fontsReady || fontError) && !holdGate ? (
+                <RootNavigator scheme={scheme} />
+              ) : null}
+
+              <StatusBar style={splashDone ? "auto" : scheme} />
+
+              {!splashDone ? (
+                <SplashOverlay
+                  hold={holdGate}
+                  onReveal={() => setRevealed(true)}
+                  onDone={() => setSplashDone(true)}
+                />
+              ) : null}
+            </NavThemeProvider>
+          </IntroRevealProvider>
+        </AppReadyProvider>
+      </SubscriptionProvider>
+    </>
+  );
+}
+
+function RootLayout() {
+  const [fontsReady, fontError] = useFonts(fontAssets);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* A render error anywhere below here used to take the app down with
-          nothing recorded: React never routes render errors through the
-          `ErrorUtils` handler that already reports every other unhandled JS
-          error to Observe. Outside the providers so a throw in one of them is
-          caught too, and outside the font gate so the fallback can render
-          before the fonts land. */}
       <ObserveErrorBoundary fallback={ObserveErrorFallback}>
-        {/* Keyboard frame tracking for `KeyboardStickyView`, so a committing
-            button can ride the keyboard up frame-for-frame. */}
-        <KeyboardProvider>
-          {/* Identity. Above the routes so the gate can read it, and outside the
-            font gate so the keychain read and environment fetch overlap the
-            font load instead of following it. `tokenCache` keeps the session
-            across relaunches; `resourceCache` lets Clerk resolve it offline. */}
+        <KeyboardProvider
+          statusBarTranslucent
+          navigationBarTranslucent
+          preserveEdgeToEdge
+        >
           <ClerkProvider
             publishableKey={CLERK_PUBLISHABLE_KEY}
             tokenCache={tokenCache}
             __experimental_resourceCache={resourceCache}
           >
-            {/* Convex, authenticated by the Clerk session above it. Renders
-              its children unconditionally and never gates. `useConvexAuth`,
-              `<Authenticated>`, and `<AuthLoading>` belong ONLY inside
-              ConvexSync: the root gate below is synchronous and offline-first,
-              and a Convex gate would put a network wait in front of a
-              returning user's own local data. */}
             <ConvexRoot>
-            <AuthBridge />
-            <ConvexSync />
-            {/* Configures RevenueCat and holds the Clarity Pro entitlement for
-              every screen. Above the routes so the first render of any screen
-              can already branch on it, and outside the font gate so the SDK
-              starts its first customer-info read while the fonts load. */}
-            <SubscriptionProvider>
-              {/* Observe's TTI is reported by each screen, but only once the
-                splash overlay is gone: until then it covers the routes and eats
-                every touch, so the app is not interactive no matter what has
-                rendered. */}
-              <AppReadyProvider value={splashDone}>
-                <IntroRevealProvider value={revealed}>
-                  <NavThemeProvider>
-                    {(fontsReady || fontError) && !holdGate ? (
-                      <RootNavigator scheme={scheme} />
-                    ) : null}
-                    {/* The splash backdrop inverts the scheme (light mode plays on
-                      black), so pin the status bar to stay legible until it's gone. */}
-                    <StatusBar style={splashDone ? "auto" : scheme} />
-                    {!splashDone ? (
-                      <SplashOverlay
-                        hold={holdGate}
-                        onReveal={() => setRevealed(true)}
-                        onDone={() => setSplashDone(true)}
-                      />
-                    ) : null}
-                  </NavThemeProvider>
-                </IntroRevealProvider>
-              </AppReadyProvider>
-            </SubscriptionProvider>
+              <AppShell
+                fontsReady={fontsReady}
+                fontError={fontError ?? null}
+              />
             </ConvexRoot>
           </ClerkProvider>
         </KeyboardProvider>
@@ -338,6 +325,19 @@ function RootLayout() {
   );
 }
 
-// Measures Time to First Render (cold_ttr / warm_ttr) and hosts the router
-// integration that tags every later metric with its route.
-export default ObserveRoot.wrap(RootLayout);
+// Named wrapper instead of ObserveRoot.wrap(RootLayout): Fast Refresh of a HOC
+// wrapped default export was a source of "Invalid hook call" because
+// expo-observe's useObserve conditionally calls expo-router hooks.
+function ObservedRoot() {
+  if (Platform.OS === "web") {
+    return <RootLayout />;
+  }
+
+  return (
+    <ObserveRoot>
+      <RootLayout />
+    </ObserveRoot>
+  );
+}
+
+export default ObservedRoot;

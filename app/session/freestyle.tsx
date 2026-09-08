@@ -21,14 +21,6 @@ import type { SessionEndedReason } from '@/types/history';
 
 import { useSessionContext } from './_layout';
 
-function dismissToHome() {
-  try {
-    router.dismissTo('/');
-  } catch {
-    router.dismissAll();
-  }
-}
-
 /** Clears the absolutely-positioned SessionTopBar, plus breathing room. */
 const CONTENT_TOP_GAP = 82;
 
@@ -52,6 +44,7 @@ export default function FreestyleScreen() {
   // object every render; stable effects/callbacks act through a ref.
   const sessionRef = useRef(session);
   const navigatedRef = useRef(false);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     sessionRef.current = session;
@@ -72,6 +65,7 @@ export default function FreestyleScreen() {
     if (retryToken === prevRetryRef.current) return;
     prevRetryRef.current = retryToken;
     navigatedRef.current = false;
+    cancelledRef.current = false;
     sessionRef.current.restart();
   }, [retryToken]);
 
@@ -103,6 +97,8 @@ export default function FreestyleScreen() {
         // Pushing Results does not unmount this screen, so the checkpoint has to
         // be cleared here or it gets recovered as a duplicate next launch.
         checkpoint.end();
+        // Dismiss during scoring cancels this navigation; the record still lands.
+        if (cancelledRef.current) return;
         setResult(result, written.ok ? written.record.id : null);
         router.push('/session/results');
       } catch {
@@ -116,10 +112,19 @@ export default function FreestyleScreen() {
    * minutes count toward effort, the skills ignore it. */
   const handleDismiss = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    cancelledRef.current = true;
     const s = sessionRef.current;
-    const live = s.status === 'listening' || s.status === 'paused';
+    const alreadyFinishing = navigatedRef.current;
     navigatedRef.current = true;
-    if (live) {
+    if (alreadyFinishing) {
+      // finishSession is in-flight. It will bank the attempt; we only cancel
+      // its Results push.
+      router.back();
+      return;
+    }
+    const inProgress =
+      s.status === 'listening' || s.status === 'paused' || s.status === 'processing';
+    if (inProgress) {
       // Checkpoint cleared only once the write lands, so a kill during stop()
       // still recovers these minutes.
       void s
@@ -130,7 +135,7 @@ export default function FreestyleScreen() {
     } else {
       checkpoint.end();
     }
-    dismissToHome();
+    router.back();
   }, [meta, checkpoint]);
 
   const handleTextSize = useCallback(() => {
@@ -195,7 +200,10 @@ export default function FreestyleScreen() {
         bottomInset={windowHeight * 0.55}
       />
 
-      <SessionTopBar onDismiss={handleDismiss} onTextSize={handleTextSize}>
+      <SessionTopBar
+        onDismiss={handleDismiss}
+        dismissDisabled={session.status === 'processing'}
+        onTextSize={handleTextSize}>
         <LiveWpm liveWpm={session.liveWpm} targetWpm={FREESTYLE_TARGET_WPM} />
       </SessionTopBar>
 

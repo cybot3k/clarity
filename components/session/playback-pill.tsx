@@ -39,7 +39,11 @@ export function PlaybackPill({ result }: PlaybackPillProps) {
     playback.toggle();
   };
 
-  const body = (
+  const body = !playback.available ? (
+    <ThemedText variant="subhead" tone="secondary">
+      Recording unavailable
+    </ThemedText>
+  ) : (
     <>
       <Pressable
         accessibilityRole="button"
@@ -82,7 +86,7 @@ export function PlaybackPill({ result }: PlaybackPillProps) {
   );
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, !playback.available && styles.unavailable]}>
       {hasGlass ? (
         <GlassView
           glassEffectStyle="regular"
@@ -111,6 +115,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     gap: spacing.lg,
+  },
+  unavailable: {
+    justifyContent: 'center',
   },
   shape: {
     borderRadius: radius.full,

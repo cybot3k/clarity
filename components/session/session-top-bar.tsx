@@ -18,21 +18,24 @@ const BAR_TOP_GAP = spacing.sm;
 
 type CircleButtonProps = {
   onPress: () => void;
+  disabled?: boolean;
   children: ReactNode;
 };
 
-function CircleButton({ onPress, children }: CircleButtonProps) {
+function CircleButton({ onPress, disabled, children }: CircleButtonProps) {
   const { colors } = useTheme();
   const hasGlass = isLiquidGlassAvailable();
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       onPress={onPress}
+      disabled={disabled}
       hitSlop={spacing.sm}
-      style={({ pressed }) => !hasGlass && pressed && styles.pressed}>
+      style={({ pressed }) => (disabled || (!hasGlass && pressed)) && styles.pressed}>
       {hasGlass ? (
-        <GlassView glassEffectStyle="regular" isInteractive style={styles.circle}>
+        <GlassView glassEffectStyle="regular" isInteractive={!disabled} style={styles.circle}>
           {children}
         </GlassView>
       ) : (
@@ -44,6 +47,8 @@ function CircleButton({ onPress, children }: CircleButtonProps) {
 
 export type SessionTopBarProps = {
   onDismiss: () => void;
+  /** True while scoring so a dismiss can't race the Results push. */
+  dismissDisabled?: boolean;
   /** Renders an "Aa" text-size button on the right when provided. */
   onTextSize?: () => void;
   /** Center slot (e.g. the live WPM header on the practice screen). */
@@ -53,7 +58,12 @@ export type SessionTopBarProps = {
 /** Shared session header: circular glass dismiss chevron (left), optional
  * "Aa" text-size button (right), and a centered content slot. Absolutely
  * positioned over the screen so content scrolls beneath it. */
-export function SessionTopBar({ onDismiss, onTextSize, children }: SessionTopBarProps) {
+export function SessionTopBar({
+  onDismiss,
+  dismissDisabled,
+  onTextSize,
+  children,
+}: SessionTopBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, scheme } = useTheme();
 
@@ -68,7 +78,7 @@ export function SessionTopBar({ onDismiss, onTextSize, children }: SessionTopBar
         ]}
       />
       <View style={[styles.bar, { top: insets.top + BAR_TOP_GAP }]} pointerEvents="box-none">
-        <CircleButton onPress={onDismiss}>
+        <CircleButton onPress={onDismiss} disabled={dismissDisabled}>
           <HugeiconsIcon icon={ArrowDown01Icon} size={24} color={colors.foreground} strokeWidth={2} />
         </CircleButton>
 

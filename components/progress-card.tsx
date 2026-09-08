@@ -35,6 +35,9 @@ function Stat({ value, unit, label }: { value: string; unit: string; label: stri
 /**
  * Hero is the rolling 7-day speaking score (same figure Analytics leads with).
  * All-time totals sit underneath as SF Pro, not LED on canvas.
+ *
+ * Title and LED stay in the navy/teal. Hairline, "Last 7 days", and delta sit
+ * on `atmosphereScrim` so white ink is never on the pale `heroStopBottom` foot.
  */
 export function ProgressCard({
   score,
@@ -49,35 +52,39 @@ export function ProgressCard({
 
   return (
     <View>
-      <AtmosphereSurface mesh="hero" radius="hero" grain style={styles.hero}>
-        <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
-          SPEAKING SCORE
-        </ThemedText>
-        <View style={styles.scoreRow}>
-          <ScoreValue value={score} size="hero" />
-          {score != null && (
-            <View style={[styles.badge, { backgroundColor: colors.card }]}>
-              <ThemedText variant="caption" weight="bold">
-                {scoreBand(score).toUpperCase()}
-              </ThemedText>
-            </View>
-          )}
-        </View>
-        <View style={[styles.track, { backgroundColor: colors.track }]}>
-          <View
-            style={[
-              styles.fill,
-              { width: `${Math.round(fill * 100)}%` as `${number}%`, backgroundColor: colors.onAtmosphere },
-            ]}
-          />
-        </View>
-        <View style={styles.metaRow}>
-          <ThemedText variant="footnote" tone="onAtmosphereMuted">
-            Last 7 days
+      <AtmosphereSurface mesh="hero" radius="hero" grain>
+        <View style={styles.hero}>
+          <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
+            SPEAKING SCORE
           </ThemedText>
-          {scoreDelta != null && scoreDelta !== 0 && (
-            <DeltaPill delta={scoreDelta} suffix="this week" />
-          )}
+          <View style={styles.scoreRow}>
+            <ScoreValue value={score} size="hero" />
+            {score != null && (
+              <View style={[styles.badge, { backgroundColor: colors.card }]}>
+                <ThemedText variant="caption" weight="bold">
+                  {scoreBand(score).toUpperCase()}
+                </ThemedText>
+              </View>
+            )}
+          </View>
+        </View>
+        <View style={[styles.foot, { backgroundColor: colors.atmosphereScrim }]}>
+          <View style={[styles.track, { backgroundColor: colors.ledOff }]}>
+            <View
+              style={[
+                styles.fill,
+                { width: `${Math.round(fill * 100)}%` as `${number}%`, backgroundColor: colors.onAtmosphere },
+              ]}
+            />
+          </View>
+          <View style={styles.metaRow}>
+            <ThemedText variant="footnote" tone="onAtmosphereMuted">
+              Last 7 days
+            </ThemedText>
+            {scoreDelta != null && scoreDelta !== 0 && (
+              <DeltaPill delta={scoreDelta} suffix="this week" />
+            )}
+          </View>
         </View>
       </AtmosphereSurface>
 
@@ -107,6 +114,13 @@ export function ProgressCard({
 const styles = StyleSheet.create({
   hero: {
     padding: spacing.xl,
+    paddingBottom: spacing.md,
+    gap: spacing.md,
+  },
+  foot: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
     gap: spacing.md,
   },
   scoreRow: {

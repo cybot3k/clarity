@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hollow: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,

@@ -1,10 +1,11 @@
+import { router } from 'expo-router';
 import { AppleIcon, GoogleIcon } from '@hugeicons/core-free-icons';
-import { useSignIn } from '@clerk/expo';
+import { useClerk, useSignIn } from '@clerk/expo';
+import { useSSO } from '@clerk/expo/experimental';
 import { useSignInWithApple } from '@clerk/expo/apple';
-import { useSignInWithGoogle } from '@clerk/expo/google';
-import Constants from 'expo-constants';
-import { Observe } from 'expo-observe';
-import { useState } from 'react';
+import { Observe } from '@/services/observe';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +14,13 @@ import { PrimaryButton, ThemedText } from '@/components/ui';
 import { spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  describeAuthError,
+  isAuthCancel,
+  isAuthSessionCancel,
+  oauthRedirectUrl,
+} from '@/services/oauth';
+import { isExpoGo } from '@/services/runtime';
 
 /**
  * Two deliberately separate ways into the Clerk DEVELOPMENT instance:
@@ -48,157 +56,198 @@ const SIMULATOR_AUTH_ERROR = !AUTOMATION_BUILD
       : null;
 const CLERK_TEST_CODE = '424242';
 
-/** Cancelling a native sheet is not an error and gets no error UI. */
-const CANCEL_CODES = new Set(['ERR_REQUEST_CANCELED', 'SIGN_IN_CANCELLED', '-5']);
-
-function isCancel(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  return typeof code === 'string' || typeof code === 'number'
-    ? CANCEL_CODES.has(String(code))
-    : false;
-}
-
-function trimmedExtra(key: string): string | null {
-  const value = (Constants.expoConfig?.extra as Record<string, unknown> | undefined)?.[key];
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
 /**
- * Whether the build can present the Google sheet at all.
+ * The signed-out screen.
  *
- * The Google SDK raises an Objective-C exception, not a JS error, when
- * Info.plist carries no URL scheme for the client ID it was configured with
- * ("missing support for the following URL schemes", GIDSignIn.m). That aborts
- * the process, so the try/catch in `run` never sees it and a build with
- * mismatched credentials crashes on tap instead of showing a message.
+ * Google uses Clerk browser OAuth (`oauth_google`) in Expo Go and in a local
+ * `bun run` binary. Native One Tap is a different strategy that needs Play
+ * SHA-1 this repo does not ship; it used to fail silently and skip OAuth.
  *
- * Both values ship in `extra` (see app.config.ts), so comparing them here
- * turns that crash back into the same failure text every other error gets.
- * The scheme is the client ID's dot-separated parts reversed and lowercased,
- * which is what GIDSignInCallbackSchemes derives. The client ID falls back to
- * the web one because the native module does the same when the iOS one is
- * unset.
- */
-function googleIsMisconfigured(): boolean {
-  if (Platform.OS !== 'ios') return false;
-  const clientId =
-    trimmedExtra('EXPO_PUBLIC_CLERK_GOOGLE_IOS_CLIENT_ID') ??
-    trimmedExtra('EXPO_PUBLIC_CLERK_GOOGLE_WEB_CLIENT_ID');
-  const scheme = trimmedExtra('EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME');
-  if (!clientId || !scheme) return true;
-  return scheme.toLowerCase() !== clientId.split('.').reverse().join('.').toLowerCase();
-}
-
-/** Read once: neither value can change after the build. */
-const GOOGLE_MISCONFIGURED = googleIsMisconfigured();
-
-/**
- * The signed-out screen: a gradient and two native sign-in buttons.
+ * Apple uses native Sign in with Apple on a real iOS binary, and `oauth_apple`
+ * in Expo Go (native tokens are issued to host.exp.Exponent, which Clerk
+ * rejects).
  *
- * Both hooks return `{ createdSessionId, setActive }` and need `setActive`
- * called. That is the documented shape for the native hooks; the `finalize()`
- * pattern belongs to Clerk's custom form flows and does not apply here. Both
- * also handle sign-in-or-sign-up internally, so one screen covers new and
- * returning users.
- *
- * No navigation on success. The root navigator's guard reads the new session
- * and swaps this group out on its own.
+ * No navigation on success. The root navigator's guard reads the new session.
  */
 export default function SignInScreen() {
   useMarkInteractive();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const clerk = useClerk();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
-  const { startGoogleAuthenticationFlow } = useSignInWithGoogle();
+  const { startSSOFlow } = useSSO();
   const { signIn } = useSignIn();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  const run = async (
-    provider: 'apple' | 'google',
-    start: () => Promise<{
-      createdSessionId: string | null;
-      setActive?: (params: { session: string }) => Promise<unknown>;
-    }>,
-  ) => {
-    if (busy) return;
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+
+  const activate = async (sessionId: string | null | undefined) => {
+    if (!sessionId) return false;
+    await clerk.setActive({ session: sessionId });
+    return true;
+  };
+
+  const startOAuth = async (strategy: 'oauth_google' | 'oauth_apple') => {
+    const redirectUrl = oauthRedirectUrl();
+
+    if (__DEV__) {
+      console.warn(
+        `[auth] OAuth redirect URL (allowlist in Clerk): ${redirectUrl}`,
+      );
+    }
+
+    console.warn('[auth] BEFORE startSSOFlow');
+
+    const result = await startSSOFlow({
+      strategy,
+      redirectUrl,
+    });
+
+    console.warn('[auth] AFTER startSSOFlow', {
+      createdSessionId: result.createdSessionId,
+      authSessionType: result.authSessionResult?.type,
+    });
+
+    if (isAuthSessionCancel(result.authSessionResult?.type)) {
+      return;
+    }
+
+    console.warn('[auth] BEFORE activate');
+
+    if (await activate(result.createdSessionId)) {
+      console.warn('[auth] AFTER activate');
+      router.replace('/');
+      return;
+    }
+
+    // Experimental SSO activates an existing session internally and returns
+    // a null createdSessionId. Clerk.session is already set in that case.
+    if (clerk.session) {
+      return;
+    }
+
+    if (result.authSessionResult?.type === 'success') {
+      throw new Error(
+        `OAuth finished without a session. Add this Redirect URL in Clerk: ${redirectUrl}`,
+      );
+    }
+
+    throw new Error(`${strategy} sign-in completed without a session`);
+  };
+
+  const onGoogle = async () => {
+    console.warn('[auth] GOOGLE BUTTON PRESSED');
+
+    if (busy || !clerk.loaded) return;
+
     setBusy(true);
     setFailure(null);
+
     try {
-      const { createdSessionId, setActive } = await start();
-      // A resolved flow with no session is not a success. Both native sheets
-      // THROW on cancel (see `isCancel`), so reaching here without one means
-      // the sign-in needs a step this screen does not offer. Left silent, the
-      // button simply looked dead.
-      if (!createdSessionId || !setActive) {
-        throw new Error(`${provider} sign-in completed without a session`);
-      }
-      await setActive({ session: createdSessionId });
+      // Browser OAuth (`oauth_google`) is the path that works in Expo Go AND
+      // in a local `bun run android` without Play SHA-1 / One Tap. Native
+      // `google_one_tap` is a different Clerk strategy; trying it first used
+      // to swallow SHA-1 failures as a silent cancel and never open OAuth.
+      await startOAuth('oauth_google');
     } catch (error) {
-      if (!isCancel(error)) {
-        Observe.reportError(error);
-        // Observe keeps the report; the console is where a developer on a
-        // device build actually reads it. Compiled out of release.
-        if (__DEV__) console.warn(`[auth] ${provider} sign-in failed`, error);
-        setFailure(`Could not sign in with ${provider === 'apple' ? 'Apple' : 'Google'}. Try again.`);
+      if (!isAuthCancel(error)) {
+        if (
+          typeof Observe !== 'undefined' &&
+          typeof Observe.reportError === 'function'
+        ) {
+          Observe.reportError(error);
+        }
+
+        if (__DEV__) {
+          console.warn('[auth] google sign-in failed', error);
+        }
+
+        setFailure(describeAuthError(error, 'Google'));
       }
     } finally {
       setBusy(false);
     }
   };
 
-  /**
-   * Only reachable from a build whose Google credentials disagree, which is a
-   * packaging mistake rather than anything the person tapping can fix. The
-   * message says what they can do next and nothing about why; the identifiers
-   * go to Observe, where they belong. The guard only fires on iOS, so the
-   * Apple button is always on screen beside it.
-   */
-  const onGoogle = () => {
-    if (GOOGLE_MISCONFIGURED) {
-      Observe.reportError(
-        new Error('Google sign-in URL scheme does not match the configured client ID'),
-      );
-      if (__DEV__) {
-        console.warn(
-          '[auth] google sign-in is misconfigured: Info.plist carries no URL scheme for the ' +
-            'configured client ID. Check EXPO_PUBLIC_CLERK_GOOGLE_IOS_CLIENT_ID against ' +
-            'EXPO_PUBLIC_CLERK_GOOGLE_IOS_URL_SCHEME.',
-        );
+  const onApple = async () => {
+    if (busy || !clerk.loaded) return;
+    setBusy(true);
+    setFailure(null);
+
+    try {
+      // Expo Go's Apple token is issued to host.exp.Exponent, which Clerk
+      // rejects. Browser OAuth is the iOS Expo Go path.
+      if (!isExpoGo()) {
+        try {
+          const native = await startAppleAuthenticationFlow();
+          if (await activate(native.createdSessionId ?? null)) return;
+          return;
+        } catch (error) {
+          if (isAuthCancel(error)) return;
+          if (__DEV__) {
+            console.warn(
+              '[auth] native Apple failed, falling back to OAuth',
+              error,
+            );
+          }
+        }
       }
-      setFailure('Google sign-in is unavailable right now. Please continue with Apple.');
-      return;
+
+      await startOAuth('oauth_apple');
+    } catch (error) {
+      if (!isAuthCancel(error)) {
+        Observe.reportError(error);
+        if (__DEV__) {
+          console.warn('[auth] apple sign-in failed', error);
+        }
+        setFailure(describeAuthError(error, 'Apple'));
+      }
+    } finally {
+      setBusy(false);
     }
-    run('google', startGoogleAuthenticationFlow);
   };
 
   /** Custom Clerk flow for the local password account or simulator test OTP. */
   const runDev = async () => {
-    if ((!DEV_ACCOUNT && !SIMULATOR_TEST_EMAIL) || busy) return;
+    if ((!DEV_ACCOUNT && !SIMULATOR_TEST_EMAIL) || busy || !clerk.loaded)
+      return;
+
     setBusy(true);
     setFailure(null);
+
     try {
       if (SIMULATOR_TEST_EMAIL) {
-        // Clerk development instances do not send mail for +clerk_test
-        // addresses; 424242 is their documented deterministic test code.
         const sent = await signIn.emailCode.sendCode({
           emailAddress: SIMULATOR_TEST_EMAIL,
         });
+
         if (sent.error) throw sent.error;
-        const verified = await signIn.emailCode.verifyCode({ code: CLERK_TEST_CODE });
+
+        const verified = await signIn.emailCode.verifyCode({
+          code: CLERK_TEST_CODE,
+        });
+
         if (verified.error) throw verified.error;
       } else if (DEV_ACCOUNT) {
         const attempted = await signIn.password(DEV_ACCOUNT);
         if (attempted.error) throw attempted.error;
       }
-      if (signIn.status !== 'complete') throw new Error(`Sign-in status ${signIn.status}`);
+
+      if (signIn.status !== 'complete') {
+        throw new Error(`Sign-in status ${signIn.status}`);
+      }
+
       const finalized = await signIn.finalize();
       if (finalized.error) throw finalized.error;
     } catch (error) {
       Observe.reportError(error);
-      // Dev-only path, so the console is the right place for the detail.
       console.warn('[auth] dev sign-in failed', error);
       setFailure('Dev sign-in failed. Check the Metro console.');
     } finally {
@@ -206,11 +255,10 @@ export default function SignInScreen() {
     }
   };
 
+  const disabled = busy || !clerk.loaded;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}>
-      {/* Placeholder artwork. Same technique as passage-carousel.tsx and
-          progressive-blur.tsx: a CSS gradient with no gradient package. The
-          stops are theme tokens so it follows the scheme. */}
       <View
         style={[
           StyleSheet.absoluteFill,
@@ -219,54 +267,77 @@ export default function SignInScreen() {
           },
         ]}
       />
+
       <View style={{ flex: 1 }} />
+
       <View
         style={[
           styles.actions,
           { paddingBottom: insets.bottom + spacing.xl },
-        ]}>
+        ]}
+      >
         {failure ? (
-          <ThemedText variant="footnote" tone="secondary" style={styles.failure}>
+          <ThemedText
+            variant="footnote"
+            tone="secondary"
+            style={styles.failure}
+          >
             {failure}
           </ThemedText>
         ) : null}
+
+        {!clerk.loaded ? (
+          <ThemedText
+            variant="footnote"
+            tone="secondary"
+            style={styles.failure}
+          >
+            Connecting…
+          </ThemedText>
+        ) : null}
+
         {SIMULATOR_AUTH_ERROR ? (
           <ThemedText
             variant="footnote"
             tone="secondary"
             style={styles.failure}
-            testID="simulator-auth-config-error">
+            testID="simulator-auth-config-error"
+          >
             {SIMULATOR_AUTH_ERROR}
           </ThemedText>
         ) : null}
-        {/* fade={false}: PrimaryButton renders a GlassView, which goes blank
-            under an animated opacity. autoplay: this screen mounts after the
-            splash, so the reveal must replay rather than skip. */}
+
         {Platform.OS === 'ios' ? (
           <IntroReveal order={0} fade={false} autoplay>
             <PrimaryButton
               title="Continue with Apple"
               icon={AppleIcon}
-              disabled={busy}
-              onPress={() => run('apple', startAppleAuthenticationFlow)}
+              disabled={disabled}
+              onPress={onApple}
             />
           </IntroReveal>
         ) : null}
+
         <IntroReveal order={1} fade={false} autoplay>
           <PrimaryButton
             title="Continue with Google"
             icon={GoogleIcon}
-            disabled={busy}
+            disabled={disabled}
             onPress={onGoogle}
           />
         </IntroReveal>
+
         {SIMULATOR_TEST_EMAIL || DEV_ACCOUNT ? (
           <Pressable
             accessibilityRole="button"
-            disabled={busy}
+            disabled={disabled}
             onPress={runDev}
             testID="dev-test-sign-in"
-            style={({ pressed }) => [styles.textButton, { opacity: pressed || busy ? 0.6 : 1 }]}>
+            style={({ pressed }) => [
+              styles.textButton,
+              { opacity: pressed || disabled ? 0.6 : 1 },
+            ]}
+          >
             <ThemedText variant="subhead" tone="tertiary">
               {SIMULATOR_TEST_EMAIL
                 ? 'Sign in as dev test user'

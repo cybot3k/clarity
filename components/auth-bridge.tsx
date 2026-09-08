@@ -8,53 +8,41 @@ import {
   setLastSignedInUserId,
 } from '@/services/auth-state';
 import { setAuthState } from '@/services/observe-events';
-import { forgetPurchaser, identifyPurchaser } from '@/services/purchases';
+import { identifyPurchaser } from '@/services/purchases';
+import { resetSettingsResolved } from '@/services/sync-state';
 
 /**
  * Renders nothing. Keeps the synchronous sign-in flag, RevenueCat's identity,
  * and the Observe auth attribute in step with Clerk.
  *
- * The flag is what the root navigator reads on its first frame, before Clerk
- * has loaded, so a returning user lands in the app offline exactly as they did
- * before accounts existed.
- *
- * RevenueCat identity follows the rule in `services/purchases.ts`: identify
- * right after a NEW login (so anonymous purchases transfer), forget on logout,
- * and never at launch. It is decided against its OWN stored id rather than the
- * sign-in flag: the flag is written the moment Clerk answers, so a `logIn` that
- * failed used to look already-done on every later pass and never ran again.
- * A cold start with a cached session identifies nothing, because that id is
- * already the identified one.
+ * Only WRITES the flag on a confirmed signed-in user. A dummy Clerk client
+ * (`isLoaded && !isSignedIn` after a SecureStore miss) used to clear it and
+ * bounce a returning user to login. Explicit sign-out in `account.ts` is what
+ * clears the flag.
  */
 export function AuthBridge() {
   const { isLoaded, isSignedIn, userId } = useAuth();
 
   useEffect(() => {
     if (!isLoaded) return;
-    const current = isSignedIn && userId ? userId : null;
-    const previous = getLastSignedInUserId();
-    setLastSignedInUserId(current);
-    setAuthState(current ? 'signed-in' : 'signed-out');
 
-    if (current) {
-      // Not on the first pass of a launch: `isLoaded` is false until Clerk has
-      // read the keychain, by which point `SubscriptionProvider` has already
-      // configured RevenueCat and `identifyPurchaser` can do real work.
-      if (getIdentifiedPurchaserId() !== current) {
-        identifyPurchaser(current)
+    if (isSignedIn && userId) {
+      const previous = getLastSignedInUserId();
+      if (previous !== userId) resetSettingsResolved();
+      setLastSignedInUserId(userId);
+      setAuthState('signed-in');
+
+      if (getIdentifiedPurchaserId() !== userId) {
+        identifyPurchaser(userId)
           .then((customerInfo) => {
-            // null means purchases are unavailable in this build, so nothing
-            // was linked and the marker stays clear for the next attempt.
-            if (customerInfo) setIdentifiedPurchaserId(current);
+            if (customerInfo) setIdentifiedPurchaserId(userId);
           })
           .catch((error) => console.warn('[auth] identifyPurchaser failed', error));
       }
-    } else if (previous) {
-      // A session revoked from outside the app. The in-app sign-out path has
-      // already forgotten the purchaser before Clerk reports signed-out.
-      setIdentifiedPurchaserId(null);
-      forgetPurchaser().catch((error) => console.warn('[auth] forgetPurchaser failed', error));
+      return;
     }
+
+    setAuthState(getLastSignedInUserId() ? 'signed-in' : 'signed-out');
   }, [isLoaded, isSignedIn, userId]);
 
   return null;

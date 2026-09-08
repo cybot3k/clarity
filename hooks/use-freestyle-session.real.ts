@@ -9,6 +9,7 @@ import {
 import { countDiscourseMarkers, countFillers } from '@/lib/fillers';
 import { tokenizeTranscript } from '@/services/alignment';
 import { claimEngine, releaseEngine } from '@/services/recognition-owner';
+import { getAccentLocale } from '@/services/settings';
 import { buildFreestyleResult } from '@/services/scoring';
 import {
   concatWavs,
@@ -191,7 +192,7 @@ export function useFreestyleSession(): FreestyleSession {
     m.expectEnd = false;
     m.startedCount += 1;
     ExpoSpeechRecognitionModule.start({
-      lang: 'en-US',
+      lang: getAccentLocale(),
       interimResults: true,
       continuous: true,
       // No reference to rerank against — take the recognizer's best.

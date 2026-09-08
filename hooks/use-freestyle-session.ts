@@ -1,17 +1,24 @@
 import { useFreestyleSession as useFreestyleSessionMock } from './use-freestyle-session.mock';
-import { useFreestyleSession as useFreestyleSessionReal } from './use-freestyle-session.real';
 
+import { isSpeechNativeAvailable } from '@/services/runtime';
 import type { FreestyleSession } from '@/types/session';
 
 /**
- * Freestyle uses the same build-time speech-engine switch as passage practice.
- * The simulator profile turns it on so every session and results surface is
- * reachable without native audio input. Production keeps the real engine.
+ * Freestyle uses the same speech-engine switch as passage practice. Expo Go
+ * and EXPO_PUBLIC_MOCK_PRACTICE=1 stay on the scripted engine so the native
+ * recognizer is never imported.
  */
-const USE_MOCK = process.env.EXPO_PUBLIC_MOCK_PRACTICE === '1';
+export const USE_MOCK =
+  process.env.EXPO_PUBLIC_MOCK_PRACTICE === '1' || !isSpeechNativeAvailable();
 
-export const useFreestyleSession: () => FreestyleSession = USE_MOCK
-  ? useFreestyleSessionMock
-  : useFreestyleSessionReal;
+function loadFreestyleSession(): () => FreestyleSession {
+  if (USE_MOCK) return useFreestyleSessionMock;
+  try {
+    return require('./use-freestyle-session.real').useFreestyleSession as () => FreestyleSession;
+  } catch (error) {
+    console.warn('[practice] native speech unavailable, using scripted freestyle', error);
+    return useFreestyleSessionMock;
+  }
+}
 
-export { USE_MOCK };
+export const useFreestyleSession: () => FreestyleSession = loadFreestyleSession();

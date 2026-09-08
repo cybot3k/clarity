@@ -1,10 +1,24 @@
 import { router } from 'expo-router';
 import { useRef } from 'react';
-import { StyleSheet } from 'react-native';
-import RevenueCatUI from 'react-native-purchases-ui';
+import { StyleSheet, View } from 'react-native';
 
+import { PrimaryButton, ThemedText } from '@/components/ui';
+import { spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSubscription } from '@/hooks/use-subscription';
+import { isExpoGo } from '@/services/runtime';
+
+type CustomerCenterView = typeof import('react-native-purchases-ui').default.CustomerCenterView;
+
+function loadCustomerCenterView(): CustomerCenterView | null {
+  if (isExpoGo()) return null;
+  try {
+    const ui = require('react-native-purchases-ui') as typeof import('react-native-purchases-ui');
+    return ui.default.CustomerCenterView;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The RevenueCat Customer Center, embedded as a route.
@@ -23,12 +37,16 @@ import { useSubscription } from '@/hooks/use-subscription';
  * destination with a back stack. The imperative version is on
  * `usePaywall().presentCustomerCenter`, for presenting it over what the customer
  * is already doing.
+ *
+ * Expo Go has no RevenueCat native view, so this route falls back to copy
+ * instead of importing `react-native-purchases-ui` at module scope.
  */
 export default function ManageSubscriptionScreen() {
   useMarkInteractive();
 
   const { refresh } = useSubscription();
   const dismissed = useRef(false);
+  const CustomerCenterView = loadCustomerCenterView();
 
   const close = () => {
     if (dismissed.current) return;
@@ -36,8 +54,23 @@ export default function ManageSubscriptionScreen() {
     router.back();
   };
 
+  if (!CustomerCenterView) {
+    return (
+      <View style={styles.fallback}>
+        <ThemedText variant="title" style={styles.fallbackTitle}>
+          Subscriptions are unavailable here
+        </ThemedText>
+        <ThemedText variant="subheadProse" tone="secondary" style={styles.fallbackBody}>
+          Manage billing in a development or store build. Expo Go cannot talk to
+          the App Store or Play Billing.
+        </ThemedText>
+        <PrimaryButton title="Close" onPress={close} />
+      </View>
+    );
+  }
+
   return (
-    <RevenueCatUI.CustomerCenterView
+    <CustomerCenterView
       style={styles.customerCenter}
       onRestoreCompleted={() => {
         refresh();
@@ -63,5 +96,18 @@ export default function ManageSubscriptionScreen() {
 const styles = StyleSheet.create({
   customerCenter: {
     flex: 1,
+  },
+  fallback: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+  fallbackTitle: {
+    textAlign: 'center',
+  },
+  fallbackBody: {
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
 });

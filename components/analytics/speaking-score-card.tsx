@@ -17,7 +17,7 @@ export type SpeakingScoreCardProps = {
   deltaSuffix?: string;
   /** Oldest first, current bucket last. `score: null` on empty buckets. */
   points: readonly ScoreChartPoint[];
-  /** Extra caption under the chart, e.g. "Each bar is one week." */
+  /** Extra caption under the chart, e.g. "Each point is one week." */
   note?: string;
 };
 

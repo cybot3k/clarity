@@ -72,8 +72,6 @@ export function FreestyleCard({ topic, onShuffle, onStart }: FreestyleCardProps)
 const styles = StyleSheet.create({
   card: {
     padding: spacing.xl,
-    borderRadius: radius.xl,
-    borderCurve: 'continuous',
   },
   topicRow: {
     flexDirection: 'row',

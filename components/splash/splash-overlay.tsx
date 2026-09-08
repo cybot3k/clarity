@@ -71,8 +71,10 @@ export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayP
     opacity.value = withTiming(
       0,
       { duration: FADE_MS, easing: Easing.out(Easing.quad) },
-      (done) => {
-        if (done) scheduleOnRN(handleFadeDone);
+      () => {
+        // Always unmount even if the timing was interrupted; a 0-opacity
+        // overlay that still eats touches wedges the app shut.
+        scheduleOnRN(handleFadeDone);
       },
     );
   }, [opacity, handleFadeDone]);
@@ -96,6 +98,7 @@ export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayP
 
   return (
     <Animated.View
+      pointerEvents="box-none"
       style={[StyleSheet.absoluteFill, { backgroundColor: colors.splashBackdrop }, fadeStyle]}>
       <LottieView
         ref={viewRef}

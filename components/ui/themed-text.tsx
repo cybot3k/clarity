@@ -16,6 +16,7 @@ export type TextTone =
   | 'focus'
   | 'onAtmosphere'
   | 'onAtmosphereMuted'
+  | 'axisChip'
   | 'onArtwork'
   | 'onArtworkMuted'
   | 'marketingPrimary'
@@ -60,6 +61,7 @@ export function ThemedText({
     focus: colors.focus,
     onAtmosphere: colors.onAtmosphere,
     onAtmosphereMuted: colors.onAtmosphereMuted,
+    axisChip: colors.axisChipInk,
     onArtwork: colors.onArtwork,
     onArtworkMuted: colors.onArtworkMuted,
     marketingPrimary: colors.marketingInk,

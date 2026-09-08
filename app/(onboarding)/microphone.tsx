@@ -1,7 +1,6 @@
 import { Mic01Icon, Shield01Icon, Tick02Icon, VoiceIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
-import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
@@ -11,6 +10,7 @@ import { spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSetting } from '@/hooks/use-settings';
 import { useTheme } from '@/hooks/use-theme';
+import { getSpeechRecognitionModule, isSpeechNativeAvailable } from '@/services/runtime';
 
 type PermissionState =
   | 'checking'
@@ -21,8 +21,9 @@ type PermissionState =
   | 'simulated';
 
 const SIMULATED_SPEECH =
-  process.env.EXPO_PUBLIC_AUTOMATION === '1' &&
-  process.env.EXPO_PUBLIC_MOCK_PRACTICE === '1';
+  (process.env.EXPO_PUBLIC_AUTOMATION === '1' &&
+    process.env.EXPO_PUBLIC_MOCK_PRACTICE === '1') ||
+  !isSpeechNativeAvailable();
 
 const ROWS: { icon: IconSvgElement; text: string }[] = [
   { icon: Mic01Icon, text: 'Microphone, so Clarity can hear you read.' },
@@ -59,8 +60,16 @@ export default function MicrophoneStep() {
     let alive = true;
     (async () => {
       try {
-        setAvailable(ExpoSpeechRecognitionModule.isRecognitionAvailable());
-        const current = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+        const speech = getSpeechRecognitionModule();
+        if (!speech) {
+          if (alive) {
+            setAvailable(false);
+            setState('simulated');
+          }
+          return;
+        }
+        setAvailable(speech.isRecognitionAvailable());
+        const current = await speech.getPermissionsAsync();
         if (alive) setState(classify(current));
       } catch {
         if (alive) setState('undetermined');
@@ -81,7 +90,12 @@ export default function MicrophoneStep() {
 
   const request = async () => {
     try {
-      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      const speech = getSpeechRecognitionModule();
+      if (!speech) {
+        setState('simulated');
+        return;
+      }
+      const result = await speech.requestPermissionsAsync();
       const next = classify(result);
       setState(next);
       if (next === 'granted') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -103,7 +117,7 @@ export default function MicrophoneStep() {
   const note = writeFailed
     ? 'Clarity could not finish setting up on this device. Tap again to retry.'
     : state === 'simulated'
-      ? 'This simulator build uses scripted speech, so it does not need microphone access.'
+      ? 'This session uses scripted speech, so it does not need microphone access.'
       : !available
       ? 'Speech recognition is not available on this device. Simulators usually lack it. Try a physical device.'
       : state === 'blocked'
@@ -147,7 +161,7 @@ export default function MicrophoneStep() {
             <HugeiconsIcon icon={Tick02Icon} size={24} color={colors.atmosphereAccent} />
             <ThemedText variant="bodyProse" style={styles.rowText}>
               {state === 'simulated'
-                ? 'Scripted speech is ready for simulator testing.'
+                ? 'Scripted speech is ready for this session.'
                 : 'Microphone and speech recognition are on.'}
             </ThemedText>
           </View>

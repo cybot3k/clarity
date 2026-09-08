@@ -23,7 +23,7 @@
  * metrics by default.
  */
 
-import { Observe } from 'expo-observe';
+import { Observe } from '@/services/observe';
 
 import type { SessionEndedReason, SessionMode } from '@/types/history';
 import type { PracticeErrorCode, SessionResult } from '@/types/session';

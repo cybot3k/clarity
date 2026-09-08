@@ -2,6 +2,8 @@ import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 
+import { isLiquidGlassAvailable } from 'expo-glass-effect';
+
 import { GlassSurface } from './glass-surface';
 
 export type OptionCardProps = {
@@ -44,7 +46,7 @@ export function OptionCard({
         Haptics.selectionAsync();
         onSelect();
       }}
-      style={({ pressed }) => [pressed && styles.pressed, style]}>
+      style={({ pressed }) => [!isLiquidGlassAvailable() && pressed && styles.pressed, style]}>
       <GlassSurface radius="lg" interactive style={styles.card}>
         {children}
       </GlassSurface>

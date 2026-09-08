@@ -230,6 +230,8 @@ export function getWordState(index: number, currentWordIndex: number): LiveWordS
 }
 
 export type ResultPlayback = {
+  /** False when the session has no playable recording. */
+  available: boolean;
   isPlaying: boolean;
   /** Playback position; updates ~4Hz while playing. */
   positionMs: number;
