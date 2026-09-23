@@ -102,7 +102,7 @@ export function SkillRow({ skill, score, caption, delta, focus = false }: SkillR
             styles.fill,
             {
               width: `${Math.round((score != null ? score : 0))}%` as `${number}%`,
-              backgroundColor: colors.foreground,
+              backgroundColor: colors.accent,
             },
           ]}
         />

@@ -14,13 +14,9 @@ import {
   type NativeSyntheticEvent,
   type TextLayoutEventData,
 } from 'react-native';
-import Animated, {
-  interpolateColor,
-  type SharedValue,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
+import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
-import { fonts } from '@/constants/theme';
+import { fonts, radius, spacing as spacingTokens } from '@/constants/theme';
 import { sentenceAt, type TokenizedPassage } from '@/lib/passage-text';
 
 const LINE_HEIGHT_FACTOR = 1.32;
@@ -38,6 +34,7 @@ export type TeleprompterColors = {
   dimmed: string;
   accent: string;
   accentFaded: string;
+  accentBg: string;
 };
 
 /**
@@ -48,24 +45,31 @@ export type TeleprompterColors = {
 function LiveWord({
   word,
   accent,
-  accentFaded,
+  accentBg,
   progress,
 }: {
   word: string;
   accent: string;
-  accentFaded: string;
+  accentBg: string;
   progress: SharedValue<number>;
 }) {
   const animatedStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(
-      progress.value,
-      [0, 0.55, 1],
-      [accentFaded, accentFaded, accent],
-    ),
+    opacity: 0.72 + progress.value * 0.28,
   }));
 
   return (
-    <Animated.Text style={animatedStyle}>{word}</Animated.Text>
+    <Animated.Text
+      style={[
+        {
+          color: accent,
+          backgroundColor: accentBg,
+          borderRadius: radius.xs,
+          paddingHorizontal: spacingTokens.xs,
+        },
+        animatedStyle,
+      ]}>
+      {word}
+    </Animated.Text>
   );
 }
 
@@ -154,12 +158,12 @@ const ActiveParagraph = memo(function ActiveParagraph({
         { color: colors.foreground, fontSize, lineHeight, marginBottom: spacing },
       ]}>
       {completedText !== '' ? <Text style={{ color: colors.dimmed }}>{completedText + ' '}</Text> : null}
-      {spokenText !== '' ? <Text style={{ color: colors.accent }}>{spokenText + ' '}</Text> : null}
+      {spokenText !== '' ? <Text style={{ color: colors.accentFaded }}>{spokenText + ' '}</Text> : null}
       {currentWord != null ? (
         <LiveWord
           word={currentWord}
           accent={colors.accent}
-          accentFaded={colors.accentFaded}
+          accentBg={colors.accentBg}
           progress={wordProgress}
         />
       ) : null}

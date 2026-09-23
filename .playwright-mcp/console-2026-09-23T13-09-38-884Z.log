@@ -1,0 +1,4 @@
+[  402509ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8091/:0
+[  402782ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8091/.expo%5Cstatic-tmp%5C_error.bundle?platform=web&dev=true&hot=false&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:0
+[  402783ms] [ERROR] Refused to execute script from 'http://localhost:8091/.expo%5Cstatic-tmp%5C_error.bundle?platform=web&dev=true&hot=false&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable' because its MIME type ('application/json') is not executable, and strict MIME type checking is enabled. @ http://localhost:8091/:0
+[  430270ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:8091/favicon.ico:0

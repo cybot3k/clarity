@@ -17,11 +17,11 @@ export const radius = {
   /** Icon beds and square tiles. */
   md: 20,
   /** Compact cards: counters, drills, rows, notices. */
-  lg: 28,
+  lg: 20,
   /** Hero cards: speaking score, daily goal, skill detail. */
-  xl: 36,
-  /** Atmospheric Glass hero squircles. Additive; existing cards keep xl. */
-  hero: 44,
+  xl: 24,
+  /** Largest content card. Still a squircle, not a stadium. */
+  hero: 28,
   /** Capsules and circles. */
   full: 9999,
 } as const;

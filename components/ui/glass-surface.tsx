@@ -44,7 +44,20 @@ export function GlassSurface({
   };
 
   if (!isLiquidGlassAvailable()) {
-    return <View style={[shape, { backgroundColor: colors.glassFallback }, style]}>{children}</View>;
+    return (
+      <View
+        style={[
+          shape,
+          {
+            backgroundColor: colors.glassFallback,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+          },
+          style,
+        ]}>
+        {children}
+      </View>
+    );
   }
 
   return (

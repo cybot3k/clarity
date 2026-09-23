@@ -33,7 +33,19 @@ const TOOLBAR_TITLE_HEIGHT = 36;
 function EditorCard({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
 
-  return <View style={[styles.card, { backgroundColor: colors.card }]}>{children}</View>;
+  return (
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
+      {children}
+    </View>
+  );
 }
 
 /** Modal for adding a user passage: title, pasted text, target pace. The

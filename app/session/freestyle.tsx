@@ -195,6 +195,7 @@ export default function FreestyleScreen() {
           foreground: colors.foreground,
           dimmed: colors.dimmed,
           accent: colors.atmosphereAccent,
+          accentBg: colors.atmosphereAccentBg,
         }}
         topInset={contentTop}
         bottomInset={windowHeight * 0.55}

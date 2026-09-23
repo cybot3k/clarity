@@ -47,7 +47,7 @@ export function PracticeControls({
   onErrorDismiss,
 }: PracticeControlsProps) {
   const insets = useSafeAreaInsets();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const hasGlass = isLiquidGlassAvailable();
 
   const processing = status === 'processing';
@@ -77,7 +77,7 @@ export function PracticeControls({
     <View style={[styles.wrap, { bottom: insets.bottom + CARD_BOTTOM_GAP }]} pointerEvents="box-none">
       <ProgressiveBlur
         direction="bottom"
-        tint={scheme}
+        tint="dark"
         style={[
           styles.blur,
           {
@@ -138,7 +138,7 @@ export function PracticeControls({
             <LiveWaveform
               meterLevel={meterLevel}
               elapsedMs={elapsedMs}
-              barColor={colors.bar}
+              barColor={paused ? colors.tertiary : colors.accent}
               timerColor={colors.foreground}
             />
             <View style={styles.controlsRow}>
@@ -169,10 +169,10 @@ export function PracticeControls({
                 disabled={processing}
                 style={({ pressed }) => [
                   styles.circle,
-                  { backgroundColor: colors.frostFallback },
+                  { backgroundColor: colors.inverseSurface },
                   (pressed || processing) && styles.pressed,
                 ]}>
-                <HugeiconsIcon icon={StopIcon} size={22} color={colors.foreground} />
+                <HugeiconsIcon icon={StopIcon} size={22} color={colors.inverseLabel} />
               </Pressable>
             </View>
           </>

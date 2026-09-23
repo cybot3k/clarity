@@ -11,12 +11,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { useTheme } from '@/hooks/use-theme';
 
+/** White mark on the black canvas. The dark Lottie is the inverse artwork. */
 const LIGHT = require('@/assets/lottie/splash/light.json');
-const DARK = require('@/assets/lottie/splash/dark.json');
-
-/** The splash artwork inverts the scheme on purpose: light mode plays white
- * shapes on a black backdrop and vice versa. The backdrop color fills any
- * aspect-ratio gaps behind the covered composition. */
 
 
 /** The animation is 102.6 frames @60fps (~1.7s). The fallback fires if
@@ -43,7 +39,7 @@ export type SplashOverlayProps = {
 /** Full-screen Lottie splash rendered above the app. Plays once, then fades
  * out into the app background while the content intro staggers in beneath. */
 export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayProps) {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const viewRef = useRef<LottieView>(null);
   const finishedRef = useRef(false);
   const holdRef = useRef(hold);
@@ -102,8 +98,7 @@ export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayP
       style={[StyleSheet.absoluteFill, { backgroundColor: colors.splashBackdrop }, fadeStyle]}>
       <LottieView
         ref={viewRef}
-        key={scheme}
-        source={scheme === 'dark' ? DARK : LIGHT}
+        source={LIGHT}
         autoPlay
         loop={false}
         resizeMode="cover"

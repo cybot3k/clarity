@@ -21,7 +21,7 @@ export function DailyGoalCard({ percent, onStartPractice }: DailyGoalCardProps) 
   const { reduced } = useAtmospherePrefs();
   const clamped = Math.max(0, Math.min(percent, 100));
   const { r, durationMs } = atmosphere.progress.dailyGoal;
-  const stroke = atmosphere.progressStroke;
+  const stroke = atmosphere.heroStroke;
   const arcLen = Math.PI * r;
   const svgW = 2 * r + stroke;
   const svgH = r + stroke;
@@ -45,25 +45,27 @@ export function DailyGoalCard({ percent, onStartPractice }: DailyGoalCardProps) 
   const windowH = r + atmosphere.ledHeight.hero / 2 + spacing.sm;
 
   return (
-    <AtmosphereSurface mesh="hero" radius="hero" grain>
+    <AtmosphereSurface mesh="hero" radius="hero">
       <View style={styles.inner}>
-        <ThemedText variant="subhead" weight="medium" tone="onAtmosphere">
-          Daily Goal
+        <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
+          TODAY
+        </ThemedText>
+        <ThemedText variant="title3" tone="onAtmosphere">
+          Daily speaking goal
         </ThemedText>
         <View style={[styles.gaugeWindow, { height: windowH }]}>
           <Svg width={svgW} height={svgH} style={styles.svg}>
             <Path
               d={d}
               fill="none"
-              stroke={colors.onAtmosphere}
-              strokeOpacity={0.22}
+              stroke={colors.track}
               strokeWidth={stroke}
               strokeLinecap="round"
             />
             <AnimatedPath
               d={d}
               fill="none"
-              stroke={colors.onAtmosphere}
+              stroke={colors.accent}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray={`${arcLen}`}
@@ -75,11 +77,11 @@ export function DailyGoalCard({ percent, onStartPractice }: DailyGoalCardProps) 
           </View>
         </View>
       </View>
-      <View style={[styles.scrim, { backgroundColor: colors.atmosphereScrim }]}>
+      <View style={styles.scrim}>
         <PrimaryButton
           title="Start Practicing"
           icon={Mic02Icon}
-          variant="frost"
+          variant="solid"
           onPress={onStartPractice}
         />
       </View>
@@ -107,8 +109,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrim: {
-    height: atmosphere.heroCtaScrim,
-    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
 });

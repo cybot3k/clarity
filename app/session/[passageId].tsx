@@ -233,6 +233,7 @@ export default function PracticeScreen() {
       dimmed: colors.dimmed,
       accent: colors.atmosphereAccent,
       accentFaded: colors.atmosphereAccentFaded,
+      accentBg: colors.atmosphereAccentBg,
     }),
     [colors],
   );

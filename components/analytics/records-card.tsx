@@ -28,7 +28,15 @@ export function RecordsCard({ rows }: { rows: readonly RecordRow[] }) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
       {rows.map((row, i) => (
         <Fragment key={row.title}>
           {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}

@@ -6,8 +6,9 @@
  */
 
 export const atmosphere = {
-  grainOpacity: { light: 0.22, dark: 0.28 },
-  grainOpacityHero: { light: 0.14, dark: 0.18 },
+  /** Grain is retired. These stay at 0 so any leftover overlay paints nothing. */
+  grainOpacity: { light: 0, dark: 0 },
+  grainOpacityHero: { light: 0, dark: 0 },
   grainOpacityReduced: 0,
   fog: {
     /** Mask intrinsic size (px). */
@@ -44,8 +45,10 @@ export const atmosphere = {
   chartUnscoredSize: 5,
   /** Home / Analytics day-letter chip diameter. */
   dayChipSize: 28,
-  /** Progress Path stroke on Daily Goal and Results. */
-  progressStroke: 3,
+  /** Progress Path stroke on skill tracks. */
+  progressStroke: 4,
+  /** Heavier arc on Daily Goal and the results ring. */
+  heroStroke: 8,
   /** Bottom band behind Daily Goal's frost CTA. */
   heroCtaScrim: 72,
   cursorDotSize: 6,

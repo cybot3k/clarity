@@ -10,7 +10,7 @@ import {
   ObserveRoot,
   canObserve,
 } from "@/services/observe";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
+import { DarkTheme, ThemeProvider } from "expo-router";
 import { Stack } from "expo-router/stack";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -25,7 +25,7 @@ import { ConvexSync } from "@/components/convex-sync";
 import { ProgressiveBlur } from "@/components/glass-tabs";
 import { ObserveErrorFallback } from "@/components/observe-error-fallback";
 import { IntroRevealProvider, SplashOverlay } from "@/components/splash";
-import { fontAssets, fonts, type ColorSchemeName } from "@/constants/theme";
+import { fontAssets, fonts } from "@/constants/theme";
 import { useIntroReveal } from "@/hooks/use-intro-reveal";
 import { AppReadyProvider } from "@/hooks/use-mark-interactive";
 import { useSettings } from "@/hooks/use-settings";
@@ -133,8 +133,8 @@ const SEED_ENABLED = process.env.EXPO_PUBLIC_SEED_HOOKS === "1";
 // before JS content mounts — the surface behind the tab-switch fade always
 // matches the screen color, so no flash.
 function NavThemeProvider({ children }: { children: ReactNode }) {
-  const { colors, scheme } = useTheme();
-  const base = scheme === "dark" ? DarkTheme : DefaultTheme;
+  const { colors } = useTheme();
+  const base = DarkTheme;
 
   const navTheme = {
     ...base,
@@ -176,7 +176,7 @@ function NavThemeProvider({ children }: { children: ReactNode }) {
  * signed out that must be sign-in. Guard flips also drop the removed group's
  * history, which is why sign-out needs no `router.replace` anywhere.
  */
-function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
+function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const { onboardingCompletedAt } = useSettings();
 
@@ -190,7 +190,7 @@ function RootNavigator({ scheme }: { scheme: ColorSchemeName }) {
     headerShadowVisible: false,
     headerBlurEffect: "none",
     headerBackground: () => (
-      <ProgressiveBlur direction="top" tint={scheme} style={{ flex: 1 }} />
+      <ProgressiveBlur direction="top" tint="dark" style={{ flex: 1 }} />
     ),
   } as const;
 
@@ -247,7 +247,6 @@ function AppShell({
   fontsReady: boolean;
   fontError: Error | null;
 }) {
-  const { scheme } = useTheme();
   const { revealed, setRevealed, splashDone, setSplashDone } =
     useIntroReveal();
   const { onboardingCompletedAt } = useSettings();
@@ -276,10 +275,10 @@ function AppShell({
           <IntroRevealProvider value={revealed}>
             <NavThemeProvider>
               {(fontsReady || fontError) && !holdGate ? (
-                <RootNavigator scheme={scheme} />
+                <RootNavigator />
               ) : null}
 
-              <StatusBar style={splashDone ? "auto" : scheme} />
+              <StatusBar style="light" />
 
               {!splashDone ? (
                 <SplashOverlay

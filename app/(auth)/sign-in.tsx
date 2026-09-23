@@ -10,8 +10,8 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IntroReveal } from '@/components/splash';
-import { PrimaryButton, ThemedText } from '@/components/ui';
-import { spacing } from '@/constants/theme';
+import { PrimaryButton, SpeechMark, ThemedText } from '@/components/ui';
+import { radius, spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -259,16 +259,22 @@ export default function SignInScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}>
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            experimental_backgroundImage: `linear-gradient(to bottom, ${colors.accentBg} 0%, ${colors.background} 70%)`,
-          },
-        ]}
-      />
-
-      <View style={{ flex: 1 }} />
+      <View style={[styles.hero, { paddingTop: insets.top + spacing.xxxxl }]}>
+        <SpeechMark color={colors.accent} height={spacing.xxxl} />
+        <ThemedText variant="largeTitle">Clarity</ThemedText>
+        <ThemedText variant="subheadProse" tone="secondary">
+          Practice out loud. Track your pace, pronunciation, and the words that slow you down.
+        </ThemedText>
+        <View style={styles.pills}>
+          {['Pace', 'Pronunciation', 'Fluency'].map((label) => (
+            <View key={label} style={[styles.pill, { backgroundColor: colors.fill, borderColor: colors.divider }]}>
+              <ThemedText variant="caption" tone="secondary">
+                {label}
+              </ThemedText>
+            </View>
+          ))}
+        </View>
+      </View>
 
       <View
         style={[
@@ -322,6 +328,7 @@ export default function SignInScreen() {
           <PrimaryButton
             title="Continue with Google"
             icon={GoogleIcon}
+            variant="frost"
             disabled={disabled}
             onPress={onGoogle}
           />
@@ -351,6 +358,25 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
+  hero: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.md,
+  },
+  pills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  pill: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.full,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
   actions: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,

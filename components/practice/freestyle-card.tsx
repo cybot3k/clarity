@@ -61,7 +61,7 @@ export function FreestyleCard({ topic, onShuffle, onStart }: FreestyleCardProps)
         title="Start Speaking"
         icon={Mic02Icon}
         size="md"
-        variant="frost"
+        variant="solid"
         onPress={() => onStart(topic)}
         style={styles.button}
       />

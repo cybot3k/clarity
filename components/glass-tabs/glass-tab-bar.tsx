@@ -71,7 +71,7 @@ export type GlassTabBarTheme = {
 
 function themeFromColors(c: ReturnType<typeof useTheme>['colors']): GlassTabBarTheme {
   return {
-    activeTint: c.foreground,
+    activeTint: c.accent,
     inactiveTint: c.secondary,
     highlight: c.card,
     glassTint: c.glassTint,
@@ -120,7 +120,7 @@ export function GlassTabBar({
   ...props
 }: GlassTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const minimized = useMinimizeState();
   const progress = minimized.progress;
   const slideIndex = useSharedValue(0);
@@ -312,7 +312,7 @@ export function GlassTabBar({
       {/* Progressive blur rising from the screen's bottom edge behind the pill. */}
       <ProgressiveBlur
         direction="bottom"
-        tint={scheme}
+        tint="dark"
         style={{
           position: 'absolute',
           left: 0,

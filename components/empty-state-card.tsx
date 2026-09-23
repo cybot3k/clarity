@@ -21,7 +21,15 @@ export function EmptyStateCard({ icon, title, subtitle }: EmptyStateCardProps) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
       <View style={[styles.iconWrap, { backgroundColor: colors.fill }]}>
         <HugeiconsIcon icon={icon} size={24} color={colors.secondary} strokeWidth={1.5} />
       </View>

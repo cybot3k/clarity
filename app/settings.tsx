@@ -36,7 +36,19 @@ const ROW_MIN_HEIGHT = 56;
  * editor uses: glass is chrome, solid cards are content. */
 function SettingsCard({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
-  return <View style={[styles.card, { backgroundColor: colors.card }]}>{children}</View>;
+  return (
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
+      {children}
+    </View>
+  );
 }
 
 /** A hairline between rows inside a card, inset past the row's padding. */

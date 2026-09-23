@@ -16,4 +16,5 @@ export { MetricCapsule, type MetricCapsuleProps, type MetricFamily } from './met
 export { OptionCard, type OptionCardProps } from './option-card';
 export { PrimaryButton, type PrimaryButtonProps } from './primary-button';
 export { SectionHeader } from './section-header';
+export { SpeechMark, type SpeechMarkProps } from './speech-mark';
 export { ThemedText, type TextTone, type ThemedTextProps } from './themed-text';

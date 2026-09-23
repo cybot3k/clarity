@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CHROME_BLUR_BLEED, ProgressiveBlur } from '@/components/glass-tabs';
 import { PrimaryButton } from '@/components/ui';
 import { spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 /** Gap between the pills and the safe-area bottom. */
 const ROW_BOTTOM_GAP = spacing.sm;
@@ -19,13 +18,11 @@ export type ResultsFooterProps = {
  * progressive blur so results scroll away beneath them. */
 export function ResultsFooter({ onRetry, onDone }: ResultsFooterProps) {
   const insets = useSafeAreaInsets();
-  const { scheme } = useTheme();
-
   return (
     <View style={styles.wrap} pointerEvents="box-none">
       <ProgressiveBlur
         direction="bottom"
-        tint={scheme}
+        tint="dark"
         style={[styles.blur, { top: -CHROME_BLUR_BLEED }]}
       />
       <View

@@ -3,41 +3,22 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { AtmosphereSurface, ThemedText } from '@/components/ui';
+import { AtmosphereSurface, SpeechMark, ThemedText } from '@/components/ui';
 import { SKILL_LABELS } from '@/constants/metrics';
 import { radius, spacing } from '@/constants/theme';
-import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
 import type { Passage } from '@/types/session';
 
-const THUMB_SIZE = 56;
+/** Wide enough for the speech mark's bars without clipping. */
+const THUMB_WIDTH = 76;
+const THUMB_HEIGHT = 48;
 
-/** Small square of the passage's card artwork (same gradient technique as
- * PassageCard, minus the text-legibility bed). */
-function ArtworkThumb({ artwork }: { artwork: Passage['artwork'] }) {
-  const { reduced } = useAtmospherePrefs();
+/** Speech mark in a square bed. Passage identity is the title, not a gradient. */
+function ArtworkThumb() {
+  const { colors } = useTheme();
   return (
-    <View style={[styles.thumb, { backgroundColor: artwork.base[0] }]}>
-      {reduced ? null : (
-        <>
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                experimental_backgroundImage: `linear-gradient(to bottom, ${artwork.base[0]} 0%, ${artwork.base[1]} 100%)`,
-              },
-            ]}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                experimental_backgroundImage: `radial-gradient(ellipse ${THUMB_SIZE}px ${THUMB_SIZE}px at 100% 0%, ${artwork.blob[0]} 0%, ${artwork.blob[1]} 40%, transparent 100%)`,
-              },
-            ]}
-          />
-        </>
-      )}
+    <View style={[styles.thumb, { backgroundColor: colors.fill }]}>
+      <SpeechMark color={colors.accent} height={spacing.lg} />
     </View>
   );
 }
@@ -64,8 +45,16 @@ export function PassageRow({ passage, onPress, onLongPress }: PassageRowProps) {
       accessibilityRole="button"
       onPress={handlePress}
       onLongPress={onLongPress ? () => onLongPress(passage) : undefined}>
-      <View style={[styles.row, { backgroundColor: colors.card }]}>
-        <ArtworkThumb artwork={passage.artwork} />
+      <View
+        style={[
+          styles.row,
+          {
+            backgroundColor: colors.card,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+          },
+        ]}>
+        <ArtworkThumb />
         <View style={styles.textCol}>
           <ThemedText variant="headline" numberOfLines={1}>
             {passage.title}
@@ -137,11 +126,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   thumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
+    width: THUMB_WIDTH,
+    height: THUMB_HEIGHT,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addThumb: {
     borderWidth: spacing.xxs,

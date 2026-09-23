@@ -52,7 +52,7 @@ export function ProgressCard({
 
   return (
     <View>
-      <AtmosphereSurface mesh="hero" radius="hero" grain>
+      <AtmosphereSurface mesh="hero" radius="hero">
         <View style={styles.hero}>
           <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
             SPEAKING SCORE
@@ -60,8 +60,8 @@ export function ProgressCard({
           <View style={styles.scoreRow}>
             <ScoreValue value={score} size="hero" />
             {score != null && (
-              <View style={[styles.badge, { backgroundColor: colors.card }]}>
-                <ThemedText variant="caption" weight="bold">
+              <View style={[styles.badge, { backgroundColor: colors.accentBg }]}>
+                <ThemedText variant="caption" weight="bold" tone="accent">
                   {scoreBand(score).toUpperCase()}
                 </ThemedText>
               </View>
@@ -73,7 +73,7 @@ export function ProgressCard({
             <View
               style={[
                 styles.fill,
-                { width: `${Math.round(fill * 100)}%` as `${number}%`, backgroundColor: colors.onAtmosphere },
+                { width: `${Math.round(fill * 100)}%` as `${number}%`, backgroundColor: colors.accent },
               ]}
             />
           </View>

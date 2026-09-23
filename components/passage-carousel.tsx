@@ -15,7 +15,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { ThemedText } from '@/components/ui';
+import { SpeechMark, ThemedText } from '@/components/ui';
 import { atmosphere, radius, spacing, springs } from '@/constants/theme';
 import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
@@ -158,75 +158,28 @@ const PassageCard = memo(function PassageCard({
     onStart(item);
   };
 
-  const buttonContent = (
-    <>
-      <HugeiconsIcon icon={PlayIcon} size={15} color={colors.onArtwork} />
-      <ThemedText variant="subhead" tone="onArtwork">
-        Start
-      </ThemedText>
-    </>
-  );
-
-  // Card artwork + text live INSIDE the card's GlassView: the native glass
-  // effect only reacts to touches that land in the glass view's own subtree,
-  // so an absolute-sibling underlay never shimmers (same finding as the tab
-  // bar — the glass view must be the container that gets pressed).
   const cardBody = (
     <>
-      {/* The art clips to the card shape HERE (not on an outer wrapper) so
-          the glass view itself can overflow its bounds — the interactive
-          press response scales the glass up slightly and an outer
-          overflow:hidden would swallow it.
-          Children must stay HIT-TESTABLE (no pointerEvents="none"): the
-          native glass mounts them inside the effect view's contentView, and
-          the interactive response only fires when a touch lands there. */}
-      <View style={styles.artClip}>
-        {/* Art fades out by ~78% height so the bottom third stays true glass;
-            one gradient per view — multi-background strings aren't supported. */}
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              experimental_backgroundImage: `linear-gradient(to bottom, ${item.artwork.base[0]} 0%, ${item.artwork.base[1]} 45%, transparent 78%)`,
-            },
-          ]}
-        />
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              // Explicit radii keep the blob an accent on the top-right
-              // corner (default farthest-corner size floods the card). Both
-              // radii are spelled out: RN's parser mis-eats `at` after a
-              // single-size `circle Npx`, dropping the position.
-              experimental_backgroundImage: `radial-gradient(ellipse ${Math.round(itemWidth * 0.6)}px ${Math.round(itemWidth * 0.6)}px at 100% 0%, ${item.artwork.blob[0]} 0%, ${item.artwork.blob[1]} 40%, transparent 100%)`,
-            },
-          ]}
-        />
-        {/* Scheme-invariant dark bed keeps the white text legible over both
-            the artwork and whatever shows through the glass. */}
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              experimental_backgroundImage: `linear-gradient(to bottom, transparent 38%, ${colors.artworkScrim} 66%, ${colors.artworkScrimStrong} 100%)`,
-            },
-          ]}
-        />
-      </View>
       <View style={styles.content}>
-        <ThemedText variant="headline" weight="bold" tone="onArtwork" numberOfLines={2}>
-          {item.title}
-        </ThemedText>
-        <ThemedText variant="footnote" tone="onArtworkMuted" style={styles.duration}>
-          {item.duration}
-        </ThemedText>
-        {/* Purely visual affordance — the WHOLE card is the pressable. The
-            pill lives INSIDE the card's glass so it expands with the
-            interactive response; it can't be its own GlassView because
-            nested glass doesn't render on iOS 26. */}
-        <View style={[styles.button, { backgroundColor: colors.artworkFill }]}>
-          {buttonContent}
+        <View style={styles.markRow}>
+          <SpeechMark color={colors.accent} height={spacing.xxl} />
+          <ThemedText variant="caption" tone="onArtworkMuted">
+            Speak
+          </ThemedText>
+        </View>
+        <View>
+          <ThemedText variant="headline" weight="bold" tone="onArtwork" numberOfLines={2}>
+            {item.title}
+          </ThemedText>
+          <ThemedText variant="footnote" tone="onArtworkMuted" style={styles.duration}>
+            {item.duration}
+          </ThemedText>
+          <View style={[styles.button, { backgroundColor: colors.inverseSurface }]}>
+            <HugeiconsIcon icon={PlayIcon} size={15} color={colors.inverseLabel} />
+            <ThemedText variant="subhead" tone="inverse">
+              Start
+            </ThemedText>
+          </View>
         </View>
       </View>
     </>
@@ -247,7 +200,15 @@ const PassageCard = memo(function PassageCard({
         }}
         style={styles.clip}>
         <View
-          style={[styles.cardFill, styles.cardShape, { backgroundColor: colors.artworkFallback }]}>
+          style={[
+            styles.cardFill,
+            styles.cardShape,
+            {
+              backgroundColor: colors.card,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.divider,
+            },
+          ]}>
           {cardBody}
         </View>
       </Pressable>
@@ -280,23 +241,18 @@ const styles = StyleSheet.create({
     borderRadius: CARD_RADIUS,
     borderCurve: 'continuous',
   },
-  artClip: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: CARD_RADIUS,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
   cardFill: {
     flex: 1,
   },
   content: {
     flex: 1,
     padding: spacing.lg,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  markRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   duration: {
     marginTop: spacing.xxs,

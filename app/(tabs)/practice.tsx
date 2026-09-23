@@ -99,8 +99,11 @@ export default function PracticeScreen() {
       {/* Same header composition as Home: title left, streak + avatar right
           (glass capsules → transform-only reveal). */}
       <View style={styles.header}>
-        <IntroReveal order={0}>
+        <IntroReveal order={0} style={styles.greeting}>
           <ThemedText variant="largeTitle">Practice</ThemedText>
+          <ThemedText variant="footnote" tone="secondary">
+            Passages, drills, or speak off script
+          </ThemedText>
         </IntroReveal>
         <IntroReveal order={0} fade={false}>
           <HeaderActions streak={stats.streak} />
@@ -188,6 +191,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  greeting: {
+    flexShrink: 1,
+    gap: spacing.xs,
   },
   drillsRow: {
     marginHorizontal: -SCREEN_PADDING,

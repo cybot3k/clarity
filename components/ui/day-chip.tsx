@@ -70,7 +70,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
 
   if (filled) {
     return (
-      <View style={[styles.chip, { backgroundColor: colors.inverseSurface }]}>
+      <View style={[styles.chip, { backgroundColor: colors.accent }]}>
         <ThemedText variant="micro" tone="inverse">
           {letter}
         </ThemedText>
@@ -89,7 +89,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
           cy={c}
           r={r}
           fill="none"
-          stroke={colors.foreground}
+          stroke={colors.track}
           strokeWidth={STROKE}
         />
         {p > 0 ? (
@@ -98,7 +98,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
             cy={c}
             r={r}
             fill="none"
-            stroke={colors.inverseSurface}
+            stroke={colors.accent}
             strokeWidth={STROKE}
             strokeLinecap="round"
             strokeDasharray={`${circ * p} ${circ}`}

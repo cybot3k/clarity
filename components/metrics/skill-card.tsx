@@ -23,7 +23,15 @@ export function SkillCard({ skills, captions, deltas }: SkillCardProps) {
   const focus = focusSkill(skills);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
       {SKILL_ORDER.map((skill) => (
         <SkillRow
           key={skill}

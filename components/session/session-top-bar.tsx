@@ -65,13 +65,13 @@ export function SessionTopBar({
   children,
 }: SessionTopBarProps) {
   const insets = useSafeAreaInsets();
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <>
       <ProgressiveBlur
         direction="top"
-        tint={scheme}
+        tint="dark"
         style={[
           styles.blur,
           { height: insets.top + BAR_TOP_GAP + BUTTON_SIZE + CHROME_BLUR_BLEED },

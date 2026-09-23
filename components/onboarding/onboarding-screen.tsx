@@ -66,7 +66,7 @@ export function OnboardingScreen({
       </ScrollView>
       <KeyboardStickyView offset={{ closed: 0, opened: bottomPad }}>
         <View style={[styles.cta, { paddingBottom: bottomPad }]}>
-          <PrimaryButton variant="frost" title={ctaTitle} onPress={onContinue} disabled={ctaDisabled} />
+          <PrimaryButton variant="solid" title={ctaTitle} onPress={onContinue} disabled={ctaDisabled} />
           {footer}
         </View>
       </KeyboardStickyView>

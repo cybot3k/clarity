@@ -39,7 +39,7 @@ export function DrillCard({ drill, onStart }: DrillCardProps) {
           <HugeiconsIcon
             icon={meta ? SKILL_ICONS[meta.skill] : SKILL_ICONS.accuracy}
             size={22}
-            color={colors.onAtmosphere}
+            color={colors.accent}
             strokeWidth={1.5}
           />
         </View>

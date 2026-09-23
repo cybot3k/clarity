@@ -61,7 +61,15 @@ export default function NameStep() {
       note={writeFailed ? 'That name could not be saved right now. You can set it in Settings later.' : null}>
       {/* Glass is chrome, solid cards are content: the same flat card the
           passage editor and Settings use. */}
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.card,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.divider,
+          },
+        ]}>
         <ThemedText variant="footnote" tone="secondary">
           Your name
         </ThemedText>

@@ -136,6 +136,11 @@ export default function HomeScreen() {
           <ThemedText variant="largeTitle" numberOfLines={2}>
             {greeting(now)}
           </ThemedText>
+          <ThemedText variant="footnote" tone="secondary" style={styles.deck}>
+            {percent > 0
+              ? `${percent}% of today's speaking goal`
+              : 'A short session is enough to start'}
+          </ThemedText>
         </IntroReveal>
         <IntroReveal order={0} fade={false}>
           <HeaderActions streak={stats.streak} />
@@ -206,6 +211,10 @@ const styles = StyleSheet.create({
   },
   greeting: {
     flexShrink: 1,
+    gap: spacing.xs,
+  },
+  deck: {
+    marginTop: spacing.xxs,
   },
   // Breathing room between a section's title/description block and its card.
   sectionCard: {

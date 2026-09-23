@@ -2,8 +2,6 @@ import LottieView from 'lottie-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { useTheme } from '@/hooks/use-theme';
-
 const START = require('@/assets/lottie/loading-spinner/Start.json');
 const ACTIVE = require('@/assets/lottie/loading-spinner/Active.json');
 const STOP = require('@/assets/lottie/loading-spinner/Stop.json');
@@ -34,8 +32,7 @@ function tintLottie(source: object, rgb: [number, number, number]): object {
 }
 
 let whiteSources: { start: object; active: object; stop: object } | null = null;
-function getSources(scheme: 'light' | 'dark') {
-  if (scheme === 'light') return { start: START, active: ACTIVE, stop: STOP };
+function getSources() {
   whiteSources ??= {
     start: tintLottie(START, [1, 1, 1]),
     active: tintLottie(ACTIVE, [1, 1, 1]),
@@ -60,8 +57,7 @@ export type LoadingSpinnerProps = {
 };
 
 export function LoadingSpinner({ active, onFinish, size = 40 }: LoadingSpinnerProps) {
-  const { scheme } = useTheme();
-  const sources = useMemo(() => getSources(scheme), [scheme]);
+  const sources = useMemo(() => getSources(), []);
   const [phase, setPhase] = useState<Phase>('start');
   const viewRef = useRef<LottieView>(null);
   const finishedRef = useRef(false);
@@ -74,7 +70,7 @@ export function LoadingSpinner({ active, onFinish, size = 40 }: LoadingSpinnerPr
     if (phase === 'done') return;
     const timer = setTimeout(() => viewRef.current?.play(), 32);
     return () => clearTimeout(timer);
-  }, [phase, scheme]);
+  }, [phase]);
 
   const finish = useCallback(() => {
     if (finishedRef.current) return;
@@ -114,7 +110,7 @@ export function LoadingSpinner({ active, onFinish, size = 40 }: LoadingSpinnerPr
       {phase === 'start' ? (
         <LottieView
           ref={viewRef}
-          key={`start-${scheme}`}
+          key="start"
           source={sources.start}
           autoPlay
           loop={false}
@@ -132,7 +128,7 @@ export function LoadingSpinner({ active, onFinish, size = 40 }: LoadingSpinnerPr
       {phase === 'active' ? (
         <LottieView
           ref={viewRef}
-          key={`active-${scheme}`}
+          key="active"
           source={sources.active}
           autoPlay
           loop
@@ -142,7 +138,7 @@ export function LoadingSpinner({ active, onFinish, size = 40 }: LoadingSpinnerPr
       {phase === 'stop' ? (
         <LottieView
           ref={viewRef}
-          key={`stop-${scheme}`}
+          key="stop"
           source={sources.stop}
           autoPlay
           loop={false}

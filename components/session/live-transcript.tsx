@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { fonts } from '@/constants/theme';
+import { fonts, radius, spacing } from '@/constants/theme';
 
 /** Matches the teleprompter's reading-text padding, so switching between a
  * scripted session and a freestyle one doesn't shift the text column. */
@@ -11,6 +11,7 @@ export type LiveTranscriptColors = {
   foreground: string;
   dimmed: string;
   accent: string;
+  accentBg: string;
 };
 
 export type LiveTranscriptProps = {
@@ -78,7 +79,13 @@ export function LiveTranscript({
           <Text style={[styles.text, { fontSize, lineHeight }]}>
             <Text style={{ color: colors.foreground }}>{finalText}</Text>
             {interimText.length > 0 && (
-              <Text style={{ color: colors.accent }}>
+              <Text
+                style={{
+                  color: colors.accent,
+                  backgroundColor: colors.accentBg,
+                  borderRadius: radius.xs,
+                  paddingHorizontal: spacing.xs,
+                }}>
                 {finalText.length > 0 ? ' ' : ''}
                 {interimText}
               </Text>

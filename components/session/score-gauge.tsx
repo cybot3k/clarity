@@ -28,7 +28,7 @@ export function ScoreGauge({ score, delta }: ScoreGaugeProps) {
   const { reduced } = useAtmospherePrefs();
   const clamped = Math.max(0, Math.min(score, 100));
   const { r, delayMs, durationMs } = atmosphere.progress.results;
-  const stroke = atmosphere.progressStroke;
+  const stroke = atmosphere.heroStroke;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const startDeg = 135;
   const arcLen = 1.5 * Math.PI * r;
@@ -57,21 +57,20 @@ export function ScoreGauge({ score, delta }: ScoreGaugeProps) {
   }));
 
   return (
-    <AtmosphereSurface mesh="hero" radius="hero" grain style={styles.card}>
+    <AtmosphereSurface mesh="hero" radius="hero" style={styles.card}>
       <View style={styles.gauge}>
         <Svg width={svgW} height={svgH}>
           <Path
             d={d}
             fill="none"
-            stroke={colors.onAtmosphere}
-            strokeOpacity={0.22}
+            stroke={colors.track}
             strokeWidth={stroke}
             strokeLinecap="round"
           />
           <AnimatedPath
             d={d}
             fill="none"
-            stroke={colors.onAtmosphere}
+            stroke={colors.accent}
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={`${arcLen}`}
@@ -96,8 +95,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gauge: {
-    width: atmosphere.progress.results.r * 2 + atmosphere.progressStroke,
-    height: atmosphere.progress.results.r * 2 + atmosphere.progressStroke,
+    width: atmosphere.progress.results.r * 2 + atmosphere.heroStroke,
+    height: atmosphere.progress.results.r * 2 + atmosphere.heroStroke,
     alignItems: 'center',
     justifyContent: 'center',
   },

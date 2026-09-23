@@ -50,7 +50,15 @@ export function WordsToMaster({
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.divider,
+        },
+      ]}>
       <View style={styles.header}>
         <ThemedText variant="subhead" tone="secondary" style={styles.summary}>
           {words.length} {words.length === 1 ? 'word needs' : 'words need'} work

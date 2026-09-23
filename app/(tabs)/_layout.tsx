@@ -1,7 +1,6 @@
 import { AudioLinesIcon, Chart02Icon, Home07Icon } from '@hugeicons/core-free-icons';
 import { useRouter } from 'expo-router';
 import { Tabs, TabList, TabSlot, TabTrigger } from 'expo-router/ui';
-import { useTheme } from '@/hooks/use-theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useIntroRevealStyle } from '@/components/splash';
@@ -25,11 +24,10 @@ const ITEMS: (GlassTabItem & { href: string })[] = [
  * fading out exactly at the top of the safe area. */
 function StatusBarBlur() {
   const insets = useSafeAreaInsets();
-  const { scheme } = useTheme();
   return (
     <ProgressiveBlur
       direction="top"
-      tint={scheme}
+      tint="dark"
       style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top }}
     />
   );

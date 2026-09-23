@@ -148,15 +148,18 @@ export default function AnalyticsScreen() {
   const header = (
     <>
       <View style={styles.header}>
-        <IntroReveal order={0}>
+        <IntroReveal order={0} style={styles.greeting}>
           <ThemedText variant="largeTitle">Analytics</ThemedText>
+          <ThemedText variant="footnote" tone="secondary">
+            How your speaking is moving
+          </ThemedText>
         </IntroReveal>
         <IntroReveal order={0} fade={false}>
           <HeaderActions streak={summary.streak} />
         </IntroReveal>
       </View>
       <IntroReveal order={1} style={styles.control}>
-        <SegmentedControl tone="ghost" segments={RANGES} selectedIndex={range} onChange={setRange} />
+        <SegmentedControl segments={RANGES} selectedIndex={range} onChange={setRange} />
       </IntroReveal>
     </>
   );
@@ -297,6 +300,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  greeting: {
+    flexShrink: 1,
+    gap: spacing.xs,
   },
   control: {
     marginTop: spacing.xl,
