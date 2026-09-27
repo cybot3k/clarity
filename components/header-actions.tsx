@@ -1,16 +1,15 @@
 import { Crown02Icon, FireIcon, Settings01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { GlassSurface, ThemedText } from '@/components/ui';
+import { ControlDisc, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useTheme } from '@/hooks/use-theme';
 
-/** One control module: both capsules are 48 tall (layout plan D2). */
+/** One control module: the capsule is 48 tall, like the settings disc beside it. */
 const CONTROL = 48;
 /** Glyph on a 48 control. */
 const ICON_SIZE = 20;
@@ -21,13 +20,14 @@ function proButtonLabel(isLoading: boolean, isPro: boolean): string {
 }
 
 /**
- * The screen-header trailing capsules shared by Home and Practice: the streak
- * capsule, and the settings cog. GlassContainer lets the capsules merge fluidly
- * when they get close.
+ * The root-tab top bar's trailing pair: the streak capsule and the settings
+ * disc. Both are hairline outlines on the canvas with no fill, like the
+ * utility circles in the destination dashboard (S1). They sit directly on the
+ * canvas, so there is no glass here to nest or to fade.
  *
  * The streak capsule doubles as the subscription entry point. That pairing is
  * temporary and deliberate — it keeps plans one tap away now that the trailing
- * capsule leads to Settings instead — so the accessibility label describes the
+ * disc leads to Settings instead — so the accessibility label describes the
  * subscription destination rather than the streak, which is what a screen-reader
  * user is about to activate.
  */
@@ -36,10 +36,8 @@ export function HeaderActions({ streak }: { streak: number }) {
   const { access, isLoading } = useSubscription();
 
   /**
-   * The subscription entry point. Subscribers get the Customer Center, where
-   * they can change plan, cancel, or fix a billing problem; everyone else gets
-   * the paywall. Routing on entitlement rather than showing both keeps one tap
-   * between the customer and the thing they came for.
+   * Subscribers get the Customer Center, where they can change plan, cancel, or
+   * fix a billing problem; everyone else gets the paywall.
    *
    * The button waits for the first entitlement read rather than routing on the
    * withheld-by-default `isPro`. That read is served from the SDK's cache and
@@ -52,39 +50,36 @@ export function HeaderActions({ streak }: { streak: number }) {
     router.push(access.isPro ? '/manage-subscription' : '/paywall');
   };
 
-  const openSettings = () => {
-    Haptics.selectionAsync();
-    router.push('/settings');
-  };
-
   return (
-    <GlassContainer spacing={spacing.sm} style={styles.row}>
-      {/* Pressable wraps the glass rather than the reverse: GlassView renders a
-          native material, so the touch target has to sit above it. */}
+    <View style={styles.row}>
       <Pressable
         onPress={openPlans}
         disabled={isLoading}
         accessibilityRole="button"
         accessibilityState={{ disabled: isLoading }}
         accessibilityLabel={proButtonLabel(isLoading, access.isPro)}
-        accessibilityHint={`Current streak: ${streak}`}>
-        <GlassSurface radius="full" tint="strong" interactive style={styles.streak}>
-          <HugeiconsIcon
-            icon={access.isPro ? Crown02Icon : FireIcon}
-            size={ICON_SIZE}
-            color={access.isPro ? colors.proGold : colors.streakFlame}
-          />
-          <ThemedText variant="callout" weight="medium" tone="primary" style={styles.count}>
-            {streak}
-          </ThemedText>
-        </GlassSurface>
+        accessibilityHint={`Current streak: ${streak}`}
+        style={({ pressed }) => [
+          styles.streak,
+          { borderColor: colors.outline },
+          pressed && styles.pressed,
+        ]}>
+        <HugeiconsIcon
+          icon={access.isPro ? Crown02Icon : FireIcon}
+          size={ICON_SIZE}
+          color={access.isPro ? colors.proGold : colors.streakFlame}
+        />
+        <ThemedText variant="callout" weight="medium" tone="primary" style={styles.count}>
+          {streak}
+        </ThemedText>
       </Pressable>
-      <Pressable onPress={openSettings} accessibilityRole="button" accessibilityLabel="Settings">
-        <GlassSurface radius="full" tint="strong" interactive style={styles.cog}>
-          <HugeiconsIcon icon={Settings01Icon} size={ICON_SIZE} color={colors.secondary} />
-        </GlassSurface>
-      </Pressable>
-    </GlassContainer>
+      <ControlDisc
+        icon={Settings01Icon}
+        fill="outline"
+        accessibilityLabel="Settings"
+        onPress={() => router.push('/settings')}
+      />
+    </View>
   );
 }
 
@@ -102,15 +97,12 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
     paddingRight: spacing.lg,
     borderRadius: radius.full,
+    borderWidth: 1,
   },
   count: {
     fontVariant: ['tabular-nums'],
   },
-  cog: {
-    width: CONTROL,
-    height: CONTROL,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+  pressed: {
+    opacity: 0.7,
   },
 });

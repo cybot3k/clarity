@@ -1,5 +1,7 @@
 import type { SharedValue } from 'react-native-reanimated';
 
+import type { MeshName } from '@/constants/atmosphere';
+
 import type { SessionMode, SkillKey } from './history';
 
 /** Library grouping for the Practice tab. */
@@ -22,6 +24,9 @@ export type Passage = {
     base: [string, string];
     blob: [string, string];
   };
+  /** The card mesh this content paints with. Built-in passages name one;
+   * anything without it resolves through `meshFor` in `lib/mesh.ts`. */
+  mesh?: MeshName;
   /** Full reference text. Paragraphs separated by "\n\n". */
   text: string;
   targetWpm: number;

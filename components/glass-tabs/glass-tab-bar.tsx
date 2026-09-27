@@ -60,7 +60,8 @@ export type GlassTabBarTheme = {
 function themeFromColors(c: ThemeColors): GlassTabBarTheme {
   return {
     activeTint: c.onTabHighlight,
-    inactiveTint: c.onAtmosphereMuted,
+    // Ink glyphs on hairline circles, as on the destination dashboard dock (S1).
+    inactiveTint: c.foreground,
     highlight: c.tabHighlight,
     glassTint: c.glassTint,
     solidFallback: c.frostFallback,

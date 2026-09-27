@@ -5,6 +5,7 @@ import type { Passage } from '@/types/session';
 export const PASSAGES: Passage[] = [
   {
     id: 'epic-speech',
+    mesh: 'teal',
     title: 'Epic Speech',
     duration: '~2 mins',
     category: 'stories',
@@ -26,6 +27,7 @@ Good tooling rarely announces itself. It just quietly deletes a chore you had st
   },
   {
     id: 'tongue-twisters',
+    mesh: 'olive',
     title: 'Tongue Twisters',
     duration: '~3 mins',
     category: 'twisters',
@@ -47,6 +49,7 @@ Fuzzy Wuzzy was a bear. Fuzzy Wuzzy had no hair. Fuzzy Wuzzy wasn't fuzzy, was h
   },
   {
     id: 'calm-narration',
+    mesh: 'dusk',
     title: 'Calm Narration',
     duration: '~4 mins',
     category: 'narration',
@@ -68,6 +71,7 @@ Evening arrives the way it always does, gradually and then all at once. The ligh
   },
   {
     id: 'news-brief',
+    mesh: 'rose',
     title: 'News Brief',
     duration: '~2 mins',
     category: 'news',
@@ -91,6 +95,7 @@ That's the briefing. Thank you for listening, and have a wonderful night.`,
   },
   {
     id: 'poetry-lines',
+    mesh: 'blue',
     title: 'Poetry Lines',
     duration: '~3 mins',
     category: 'poetry',

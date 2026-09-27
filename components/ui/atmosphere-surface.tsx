@@ -1,13 +1,26 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 
-import { atmosphere, radius as radiusTokens, type ThemeColors } from '@/constants/theme';
+import {
+  atmosphere,
+  MESH_NAMES,
+  radius as radiusTokens,
+  type MeshName,
+  type ThemeColors,
+} from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { Passage } from '@/types/session';
 
 import { GrainOverlay } from './grain-overlay';
 
-export type AtmosphereMesh = 'hero' | 'minutes' | 'sessions' | 'streak' | 'mastered' | 'artwork';
+export type AtmosphereMesh =
+  | 'hero'
+  | 'minutes'
+  | 'sessions'
+  | 'streak'
+  | 'mastered'
+  | 'artwork'
+  | MeshName;
 
 type SurfaceBase = {
   children?: ReactNode;
@@ -61,7 +74,56 @@ function familyStops(
   }
 }
 
-function stopsFor(mesh: AtmosphereMesh, colors: ThemeColors, artwork?: Passage['artwork']): Stops {
+/** A destination card mesh: Base fill, then Glow, Bloom, and Deep pools. */
+function cardMeshStops(mesh: MeshName, colors: ThemeColors) {
+  switch (mesh) {
+    case 'teal':
+      return {
+        base: colors.meshTealBase,
+        deep: colors.meshTealDeep,
+        glow: colors.meshTealGlow,
+        bloom: colors.meshTealBloom,
+      };
+    case 'olive':
+      return {
+        base: colors.meshOliveBase,
+        deep: colors.meshOliveDeep,
+        glow: colors.meshOliveGlow,
+        bloom: colors.meshOliveBloom,
+      };
+    case 'dusk':
+      return {
+        base: colors.meshDuskBase,
+        deep: colors.meshDuskDeep,
+        glow: colors.meshDuskGlow,
+        bloom: colors.meshDuskBloom,
+      };
+    case 'rose':
+      return {
+        base: colors.meshRoseBase,
+        deep: colors.meshRoseDeep,
+        glow: colors.meshRoseGlow,
+        bloom: colors.meshRoseBloom,
+      };
+    case 'blue':
+      return {
+        base: colors.meshBlueBase,
+        deep: colors.meshBlueDeep,
+        glow: colors.meshBlueGlow,
+        bloom: colors.meshBlueBloom,
+      };
+  }
+}
+
+function isCardMesh(mesh: AtmosphereMesh): mesh is MeshName {
+  return (MESH_NAMES as readonly string[]).includes(mesh);
+}
+
+function stopsFor(
+  mesh: Exclude<AtmosphereMesh, MeshName>,
+  colors: ThemeColors,
+  artwork?: Passage['artwork'],
+): Stops {
   if (mesh === 'hero') {
     return {
       fill: colors.heroStopMid,
@@ -109,7 +171,8 @@ export function AtmosphereSurface({
   const { colors, scheme } = useTheme();
   const artwork = 'artwork' in rest ? rest.artwork : undefined;
   const corner = radiusTokens[radius];
-  const paint = stopsFor(mesh, colors, artwork);
+  const card = isCardMesh(mesh) ? cardMeshStops(mesh, colors) : null;
+  const paint = isCardMesh(mesh) ? null : stopsFor(mesh, colors, artwork);
   const [size, setSize] = useState({ w: 0, h: 0 });
 
   const onLayout = (event: LayoutChangeEvent) => {
@@ -128,11 +191,21 @@ export function AtmosphereSurface({
           borderRadius: corner,
           borderCurve: 'continuous',
           overflow: 'hidden',
-          backgroundColor: paint.fill,
+          backgroundColor: card?.base ?? paint?.fill,
         },
         style,
       ]}>
-      {measured ? (
+      {measured && card != null ? (
+        <>
+          {(['glow', 'bloom', 'deep'] as const).map((key) => {
+            const at = atmosphere.cardMesh[key];
+            return (
+              <Pool key={key} css={pool(at.rx * w, at.ry * h, at.cx * w, at.cy * h, card[key])} />
+            );
+          })}
+        </>
+      ) : null}
+      {measured && paint != null ? (
         <>
           <Pool css={pool(0.9 * w, 0.8 * h, 0, 0, paint.from)} />
           <Pool css={pool(0.9 * w, 0.8 * h, w, h, paint.via)} />

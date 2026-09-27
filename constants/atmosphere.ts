@@ -84,6 +84,19 @@ export const atmosphere = {
   identityPip: 8,
   /** Analytics polyline stroke. */
   chartStroke: 1.5,
+  /**
+   * Pool placement for a card mesh (`AtmosphereSurface mesh="teal"` etc.), as
+   * fractions of the card: center `cx`/`cy`, radii `rx`/`ry`. Painted over the
+   * Base fill in this order, so Deep lands last and owns the top-left text zone.
+   * Glow lights the lower right behind the dot row, the one band with no text
+   * (S2's cards brighten toward that corner). Bloom is centered past the
+   * top-right corner, so only its soft falloff enters.
+   */
+  cardMesh: {
+    glow: { cx: 0.8, cy: 0.85, rx: 0.8, ry: 0.55 },
+    bloom: { cx: 1.1, cy: -0.1, rx: 0.65, ry: 0.55 },
+    deep: { cx: 0, cy: 0, rx: 1.1, ry: 0.95 },
+  },
   progress: {
     // stroke and dotPitch mirror resultsArc so existing results reads keep working.
     results: {
@@ -99,3 +112,7 @@ export const atmosphere = {
 } as const;
 
 export type LedSize = keyof typeof atmosphere.led;
+
+/** The card meshes, one per destination reference palette (`mesh*` in `colors.ts`). */
+export const MESH_NAMES = ['teal', 'olive', 'dusk', 'rose', 'blue'] as const;
+export type MeshName = (typeof MESH_NAMES)[number];

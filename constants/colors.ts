@@ -2,9 +2,16 @@
  * Every color in the app, keyed by color scheme. One map, no exceptions — if a
  * screen or component needs a color, it names one of these tokens.
  *
- * Light is a pale pearl mist with a cool lilac cast. Dark is deep plum. The two
- * maps are written out separately; `dark` is never a spread of `light`. Depth
- * comes from canvas fog, grain, and chromatic meshes, plus frost and solid cards.
+ * Light is a neutral pearl: a cool grey canvas with a faint warm edge, pure
+ * near-black ink, and white cards, sampled from the `destination/` references
+ * (see `docs/destination-1to1-plan.md` §5.1). Dark is deep plum until its own
+ * pass. The two maps are written out separately; `dark` is never a spread of
+ * `light`. Depth comes from canvas fog, grain, and chromatic meshes, plus frost
+ * and solid cards.
+ *
+ * The `mesh*` families are self-lit artwork, so they carry the same values in
+ * both schemes. White ink sits only in a mesh's Deep and Base regions; Glow and
+ * Bloom are too light for it.
  *
  * There is one lime, `#D6FF4A`. `accent` is the fill, `onAccent` is the ink on
  * that fill, and `accentText` is lime read as text or stroke. The tab bar uses
@@ -20,7 +27,7 @@
 const light = {
   // --- Surfaces, fills, inverse, CTA, tab ---
   /** Nav theme background. Same value as `atmosphereCanvas`. */
-  background: '#EEEDF3',
+  background: '#E8EAEE',
   /** Solid reading card. */
   card: '#FFFFFF',
   /** `GlassSurface tint="standard"`, tab pill. */
@@ -30,7 +37,7 @@ const light = {
   /** Legacy. Mirrors `frostFallback`. */
   glassFallback: 'rgba(255,255,255,0.58)',
   /** Translucent non-glass frost. Mesh and fog must show through. */
-  frostFallback: 'rgba(255,255,255,0.58)',
+  frostFallback: 'rgba(255,255,255,0.72)',
   /** Hairline on every non-native frost surface and its fallback. */
   frostRim: 'rgba(255,255,255,0.90)',
   /** Opaque bed (syllable chip normal, failed knob). */
@@ -38,50 +45,50 @@ const light = {
   /** Stronger opaque bed. */
   fillStrong: '#D6D3DF',
   /** Ghost buttons and beds over color. */
-  fillTranslucent: 'rgba(28,22,48,0.06)',
+  fillTranslucent: 'rgba(13,13,13,0.05)',
   /** Solid pill, completed goal DayChip, save badge. */
-  inverseSurface: '#17141F',
+  inverseSurface: '#0D0D0D',
   /** Ink on `inverseSurface`. */
   inverseLabel: '#FFFFFF',
   /** Disabled solid or knob. */
   inverseSurfaceMuted: 'rgba(23,20,31,0.24)',
   /** Knob pill track. At least 3:1 against `accent`. */
-  ctaTrack: '#17141F',
+  ctaTrack: '#0D0D0D',
   /** Knob pill label. */
   ctaLabel: '#FFFFFF',
   /** Tab bar active capsule or circle. Never lime. */
-  tabHighlight: '#17141F',
+  tabHighlight: '#0D0D0D',
   /** Active tab glyph and label. */
   onTabHighlight: '#FFFFFF',
 
   // --- Ink ---
   /** Primary ink. */
-  foreground: '#16131D',
+  foreground: '#0D0D0D',
   /** Support copy. */
-  secondary: '#55515F',
+  secondary: '#63676C',
   /** Units and quiet halves below 24pt. */
-  tertiary: '#76727F',
+  tertiary: '#7A7E83',
   /** Teleprompter past text. */
   dimmed: '#868292',
   /** Faint half at 24pt and above, on canvas, card, or frost. */
-  numeralFaint: 'rgba(22,19,29,0.30)',
+  numeralFaint: 'rgba(13,13,13,0.28)',
   /** Strong ink on the canvas and on every chromatic mesh except artwork. */
-  onAtmosphere: '#16131D',
+  onAtmosphere: '#0D0D0D',
   /** Labels on mesh or canvas; quiet half below 24pt on mesh. */
-  onAtmosphereMuted: 'rgba(22,19,29,0.62)',
+  onAtmosphereMuted: 'rgba(13,13,13,0.60)',
   /** Faint half at 24pt and above on mesh; dotted ring track. */
-  onAtmosphereFaint: 'rgba(22,19,29,0.30)',
+  onAtmosphereFaint: 'rgba(13,13,13,0.28)',
   /** Ink on artwork. Mid-dark artwork, so this matches dark. */
   onArtwork: '#FBF8FF',
   /** Muted ink on artwork. */
   onArtworkMuted: 'rgba(251,248,255,0.74)',
 
   // --- Lines ---
-  divider: 'rgba(22,19,29,0.08)',
+  divider: 'rgba(13,13,13,0.07)',
   /** Unfilled portion of a tick meter or ring. */
-  track: 'rgba(22,19,29,0.14)',
+  track: 'rgba(13,13,13,0.12)',
   /** A border meant to be seen as a border. */
-  outline: 'rgba(22,19,29,0.18)',
+  outline: 'rgba(13,16,24,0.14)',
   /** A filled bar for a day other than today. */
   bar: '#C9C5D2',
   /** Stub bar for a day with no data. */
@@ -119,16 +126,16 @@ const light = {
 
   // --- Canvas, scrims, splash ---
   /** Canvas base, native underlay, sheet background. */
-  atmosphereCanvas: '#EEEDF3',
+  atmosphereCanvas: '#E8EAEE',
   /** Top pool: rose. */
-  canvasFog: 'rgba(236,170,200,0.50)',
+  canvasFog: 'rgba(214,224,236,0.60)',
   /** Ambient mid-left core and orb tint. */
-  canvasFogCore: 'rgba(206,190,246,0.60)',
+  canvasFogCore: 'rgba(236,235,242,0.70)',
   /** Bottom bloom; the stage's lower pool. */
-  canvasFogLow: 'rgba(190,214,240,0.55)',
-  atmosphereScrim: 'rgba(238,237,243,0.60)',
+  canvasFogLow: 'rgba(240,228,218,0.60)',
+  atmosphereScrim: 'rgba(232,234,238,0.60)',
   /** ProgressiveBlur peak. Canvas hue, never black. */
-  chromeScrim: 'rgba(238,237,243,0.92)',
+  chromeScrim: 'rgba(232,234,238,0.92)',
   /** Plum, for the white Lottie. */
   splashBackdrop: '#2A1838',
   streakFlame: '#E8710A',
@@ -198,6 +205,30 @@ const light = {
   artworkScrimStrong: 'rgba(28,16,40,0.55)',
   artworkGlass: 'rgba(255,255,255,0.28)',
   artworkFallback: '#8F7FB0',
+  // --- Card meshes (destination references). Same values in dark. ---
+  // Deep = the text zone, Base = the fill, Glow = the luminous pool, Bloom =
+  // the second hue. Teal is S4, olive and rose are S2's two cards, dusk is S3,
+  // blue is S6.
+  meshTealDeep: '#024A5C',
+  meshTealBase: '#1A8F96',
+  meshTealGlow: '#45DAC8',
+  meshTealBloom: '#DFA0A1',
+  meshOliveDeep: '#2B3505',
+  meshOliveBase: '#5A682A',
+  meshOliveGlow: '#C4DD68',
+  meshOliveBloom: '#91A83D',
+  meshDuskDeep: '#504621',
+  meshDuskBase: '#8A6236',
+  meshDuskGlow: '#AE7556',
+  meshDuskBloom: '#A0685F',
+  meshRoseDeep: '#7E5452',
+  meshRoseBase: '#A2806E',
+  meshRoseGlow: '#C1A57E',
+  meshRoseBloom: '#B17C79',
+  meshBlueDeep: '#153351',
+  meshBlueBase: '#3E6D8E',
+  meshBlueGlow: '#8EB6C9',
+  meshBlueBloom: '#52A5C9',
   /** Legacy, dead. */
   addLeak: 'rgba(214,255,74,0)',
   /** Legacy, dead. */
@@ -322,6 +353,26 @@ const dark: Record<keyof typeof light, string> = {
   artworkScrimStrong: 'rgba(14,8,20,0.66)',
   artworkGlass: 'rgba(26,17,34,0.50)',
   artworkFallback: '#3A2C4A',
+  meshTealDeep: '#024A5C',
+  meshTealBase: '#1A8F96',
+  meshTealGlow: '#45DAC8',
+  meshTealBloom: '#DFA0A1',
+  meshOliveDeep: '#2B3505',
+  meshOliveBase: '#5A682A',
+  meshOliveGlow: '#C4DD68',
+  meshOliveBloom: '#91A83D',
+  meshDuskDeep: '#504621',
+  meshDuskBase: '#8A6236',
+  meshDuskGlow: '#AE7556',
+  meshDuskBloom: '#A0685F',
+  meshRoseDeep: '#7E5452',
+  meshRoseBase: '#A2806E',
+  meshRoseGlow: '#C1A57E',
+  meshRoseBloom: '#B17C79',
+  meshBlueDeep: '#153351',
+  meshBlueBase: '#3E6D8E',
+  meshBlueGlow: '#8EB6C9',
+  meshBlueBloom: '#52A5C9',
   addLeak: 'rgba(214,255,74,0)',
   addLeakHot: 'rgba(214,255,74,0)',
   marketingCanvas: '#FFFFFF',
