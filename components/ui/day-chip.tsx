@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { atmosphere } from '@/constants/theme';
+import { atmosphere, radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { ThemedText } from './themed-text';
@@ -19,39 +19,35 @@ export type DayChipProps = {
   selected?: boolean;
 };
 
-const STROKE = 1.5;
+/** Today's progress arc. The track beside it stays a hairline. */
+const ARC_STROKE = 2;
 
 /**
- * Circular day letter. Home `goal` sits on atmosphereCanvas (inverse fill when
- * completed). Analytics `axis` sits on the navy hero (onAtmosphere ink, white
- * selected pill).
+ * Circular day letter. Goal chips sit on the canvas: completed is inverse ink,
+ * never lime. Axis chips sit on a mesh: selected is the accent fill.
  */
 export function DayChip({ intent, letter, filled, muted, progress, selected }: DayChipProps) {
   const { colors } = useTheme();
   const d = atmosphere.dayChipSize;
-  const r = (d - STROKE) / 2;
+  const r = (d - ARC_STROKE) / 2;
   const c = d / 2;
 
   if (intent === 'axis') {
     return (
-      <View
-        style={[
-          styles.chip,
-          selected ? { backgroundColor: colors.cursorDot } : null,
-        ]}>
-        {!selected ? (
+      <View style={[styles.chip, selected ? { backgroundColor: colors.accent } : null]}>
+        {selected ? null : (
           <Svg width={d} height={d} style={StyleSheet.absoluteFill}>
             <Circle
               cx={c}
               cy={c}
               r={r}
               fill="none"
-              stroke={colors.onAtmosphere}
-              strokeWidth={STROKE}
+              stroke={colors.onAtmosphereMuted}
+              strokeWidth={StyleSheet.hairlineWidth}
             />
           </Svg>
-        ) : null}
-        <ThemedText variant="micro" tone={selected ? 'axisChip' : 'onAtmosphere'}>
+        )}
+        <ThemedText variant="micro" tone={selected ? 'onAccent' : 'onAtmosphere'}>
           {letter}
         </ThemedText>
       </View>
@@ -70,7 +66,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
 
   if (filled) {
     return (
-      <View style={[styles.chip, { backgroundColor: colors.accent }]}>
+      <View style={[styles.chip, { backgroundColor: colors.inverseSurface }]}>
         <ThemedText variant="micro" tone="inverse">
           {letter}
         </ThemedText>
@@ -78,6 +74,7 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
     );
   }
 
+  const today = progress != null;
   const p = Math.max(0, Math.min(progress ?? 0, 1));
   const circ = 2 * Math.PI * r;
 
@@ -90,22 +87,24 @@ export function DayChip({ intent, letter, filled, muted, progress, selected }: D
           r={r}
           fill="none"
           stroke={colors.track}
-          strokeWidth={STROKE}
+          strokeWidth={StyleSheet.hairlineWidth}
         />
-        {p > 0 ? (
+        {today && p > 0 ? (
           <Circle
             cx={c}
             cy={c}
             r={r}
             fill="none"
-            stroke={colors.accent}
-            strokeWidth={STROKE}
+            stroke={colors.foreground}
+            strokeWidth={ARC_STROKE}
             strokeLinecap="round"
             strokeDasharray={`${circ * p} ${circ}`}
           />
         ) : null}
       </Svg>
-      <ThemedText variant="micro">{letter}</ThemedText>
+      <ThemedText variant="micro" tone={today ? 'primary' : 'secondary'}>
+        {letter}
+      </ThemedText>
     </View>
   );
 }
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
   chip: {
     width: atmosphere.dayChipSize,
     height: atmosphere.dayChipSize,
-    borderRadius: atmosphere.dayChipSize / 2,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

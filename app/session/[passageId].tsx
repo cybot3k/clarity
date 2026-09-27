@@ -39,7 +39,7 @@ export default function PracticeScreen() {
   // counts as this route being interactive.
   useMarkInteractive(Boolean(found));
 
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { setResult, retryToken } = useSessionContext();
@@ -231,9 +231,9 @@ export default function PracticeScreen() {
     () => ({
       foreground: colors.foreground,
       dimmed: colors.dimmed,
-      accent: colors.atmosphereAccent,
-      accentFaded: colors.atmosphereAccentFaded,
-      accentBg: colors.atmosphereAccentBg,
+      accent: colors.accentText,
+      accentFaded: colors.accentFaded,
+      accentBg: colors.accentBg,
     }),
     [colors],
   );
@@ -243,7 +243,7 @@ export default function PracticeScreen() {
   const contentTop = insets.top + CONTENT_TOP_GAP;
 
   return (
-    <AtmosphereCanvas fog={false}>
+    <AtmosphereCanvas mode="stage">
     <View style={styles.screen}>
       <Teleprompter
         tokenized={tokenized}

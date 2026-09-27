@@ -6,9 +6,19 @@
  */
 
 export const atmosphere = {
-  /** Grain is retired. These stay at 0 so any leftover overlay paints nothing. */
-  grainOpacity: { light: 0, dark: 0 },
-  grainOpacityHero: { light: 0, dark: 0 },
+  /**
+   * Grain is on. `canvas` is the screen wash; `mesh` is every chromatic
+   * surface, including the splash. Reduced transparency unmounts grain.
+   */
+  grain: {
+    canvas: { light: 0.06, dark: 0.09 },
+    mesh: { light: 0.10, dark: 0.12 },
+  },
+  /** Mirrors `grain.canvas` so a leftover overlay does not paint nothing. */
+  grainOpacity: { light: 0.06, dark: 0.09 },
+  /** Mirrors `grain.mesh`. */
+  grainOpacityHero: { light: 0.10, dark: 0.12 },
+  /** Kill switch. Reduced transparency unmounts grain. */
   grainOpacityReduced: 0,
   fog: {
     /** Mask intrinsic size (px). */
@@ -47,15 +57,44 @@ export const atmosphere = {
   dayChipSize: 28,
   /** Progress Path stroke on skill tracks. */
   progressStroke: 4,
-  /** Heavier arc on Daily Goal and the results ring. */
+  /** Heavier arc kept for callers that have not moved to `resultsArc`. */
   heroStroke: 8,
   /** Bottom band behind Daily Goal's frost CTA. */
   heroCtaScrim: 72,
   cursorDotSize: 6,
   pressScale: 0.98,
+  /** Home stat tiles are square. */
+  statTileAspect: 1,
+  /** Daily Goal ring. Replaces the dead semicircle (`progress.dailyGoal`). */
+  goalRing: { size: 112, stroke: 2, durationMs: 900 },
+  /** Results ring hairline. The gauge SVG box is `2 * progress.results.r + cursorSize`. */
+  resultsArc: { stroke: 3, dotPitch: 8 },
+  /** Filled head dot on the goal ring and the score meter. */
+  meterHead: 8,
+  /** Hollow origin dot diameter. */
+  meterOrigin: 7,
+  meterOriginStroke: 1.5,
+  /** Frost shelf overlap across the stage edge. */
+  shelfOverlap: 48,
+  /** Drill card height / width. */
+  drillAspect: 0.86,
+  /** Skill dot meter. */
+  skillMeter: { dots: 20, dot: 4 },
+  /** Identity dot diameter. */
+  identityPip: 8,
+  /** Analytics polyline stroke. */
+  chartStroke: 1.5,
   progress: {
-    dailyGoal: { startDeg: 180, sweepDeg: -180, r: 96, durationMs: 900 },
-    results: { startDeg: 135, sweepDeg: 270, r: 110, delayMs: 350, durationMs: 1100 },
+    // stroke and dotPitch mirror resultsArc so existing results reads keep working.
+    results: {
+      startDeg: 135,
+      sweepDeg: 270,
+      r: 124,
+      delayMs: 350,
+      durationMs: 1100,
+      stroke: 3,
+      dotPitch: 8,
+    },
   },
 } as const;
 

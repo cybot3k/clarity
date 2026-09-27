@@ -16,8 +16,8 @@ export const DRILLS: Passage[] = [
     category: 'drill',
     skills: ['accuracy'],
     artwork: {
-      base: ['rgba(230,80,60,0.92)', 'rgba(160,40,110,0.85)'],
-      blob: ['rgba(255,210,120,0.92)', 'rgba(255,120,90,0.55)'],
+      base: ['rgba(213,93,77,0.92)', 'rgba(148,52,108,0.85)'],
+      blob: ['rgba(242,206,134,0.92)', 'rgba(239,131,107,0.55)'],
     },
     targetWpm: 100,
     text: `Ship and sheep. Bit and beat. Full and fool. Pull and pool. Live and leave. Fill and feel. Sit and seat. Chip and cheap.
@@ -35,8 +35,8 @@ Light and right. Long and wrong. Lice and rice. Glass and grass. Fly and fry. Pl
     category: 'drill',
     skills: ['accuracy'],
     artwork: {
-      base: ['rgba(16,150,130,0.92)', 'rgba(20,100,170,0.85)'],
-      blob: ['rgba(150,255,200,0.9)', 'rgba(80,220,255,0.55)'],
+      base: ['rgba(29,137,121,0.92)', 'rgba(35,99,155,0.85)'],
+      blob: ['rgba(161,245,201,0.9)', 'rgba(98,210,238,0.55)'],
     },
     targetWpm: 120,
     text: `Red leather, yellow leather. Red leather, yellow leather. Red leather, yellow leather.
@@ -54,8 +54,8 @@ Truly rural, truly rural, truly rural. Eleven benevolent elephants. Eleven benev
     category: 'drill',
     skills: ['pace'],
     artwork: {
-      base: ['rgba(90,70,200,0.92)', 'rgba(50,60,160,0.85)'],
-      blob: ['rgba(170,200,255,0.9)', 'rgba(120,140,255,0.55)'],
+      base: ['rgba(99,83,187,0.92)', 'rgba(61,69,149,0.85)'],
+      blob: ['rgba(178,203,246,0.9)', 'rgba(134,150,242,0.55)'],
     },
     targetWpm: 110,
     text: `Take a breath before you begin. Let each word arrive on its own time, unhurried and complete. There is no prize for finishing first.
@@ -71,8 +71,8 @@ Speak as if the listener is writing down every word. Give them time to keep up. 
     category: 'drill',
     skills: ['pace'],
     artwork: {
-      base: ['rgba(235,140,30,0.92)', 'rgba(200,70,60,0.85)'],
-      blob: ['rgba(255,240,150,0.92)', 'rgba(255,170,100,0.55)'],
+      base: ['rgba(214,138,50,0.92)', 'rgba(186,82,74,0.85)'],
+      blob: ['rgba(245,233,161,0.92)', 'rgba(240,171,115,0.55)'],
     },
     targetWpm: 170,
     text: `The market opens in five minutes and there is a lot to cover, so let's move. Headlines first, details after, questions at the end.
@@ -88,8 +88,8 @@ Keep the energy up and the words crisp. Fast does not mean sloppy. Every syllabl
     category: 'drill',
     skills: ['fluency'],
     artwork: {
-      base: ['rgba(30,140,180,0.92)', 'rgba(40,80,190,0.85)'],
-      blob: ['rgba(160,240,255,0.9)', 'rgba(100,180,255,0.55)'],
+      base: ['rgba(45,133,165,0.92)', 'rgba(55,87,175,0.85)'],
+      blob: ['rgba(170,233,245,0.9)', 'rgba(115,180,240,0.55)'],
     },
     targetWpm: 140,
     text: `The river does not stop to think about the stones; it simply finds its way around them, and the melody of moving water never breaks.
@@ -105,8 +105,8 @@ When a word trips you, glide on. The sentence carries you forward, and the curre
     category: 'drill',
     skills: ['intonation'],
     artwork: {
-      base: ['rgba(150,50,190,0.92)', 'rgba(90,40,170,0.85)'],
-      blob: ['rgba(255,170,220,0.92)', 'rgba(200,120,255,0.55)'],
+      base: ['rgba(144,64,176,0.92)', 'rgba(93,53,157,0.85)'],
+      blob: ['rgba(246,178,218,0.92)', 'rgba(198,134,242,0.55)'],
     },
     targetWpm: 130,
     text: `Listen! Do you hear it? Far below the cliffs, the sea is calling, soft at first, then rising, wave upon wave, until the whole shore rings with it.

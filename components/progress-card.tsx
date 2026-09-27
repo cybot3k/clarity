@@ -1,10 +1,17 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 import { DeltaPill, ScoreValue } from '@/components/metrics';
-import { AtmosphereSurface, ThemedText } from '@/components/ui';
+import { MetricCapsule, ThemedText } from '@/components/ui';
 import { atmosphere, radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { scoreBand } from '@/lib/score';
+
+/** Meter band. The line sits on its center. Named by the home contract, not a spacing step. */
+const METER_BAND = 12;
+/** Solid meter stroke. Named by the home contract, not a spacing step. */
+const METER_STROKE = 2;
 
 export type ProgressCardProps = {
   /** Rolling 7-day speaking score; null when the week has nothing measured. */
@@ -16,28 +23,67 @@ export type ProgressCardProps = {
   longestStreak: number;
 };
 
-function Stat({ value, unit, label }: { value: string; unit: string; label: string }) {
+function ScoreMeter({ score }: { score: number | null }) {
+  const { colors } = useTheme();
+  const [width, setWidth] = useState(0);
+  const y = METER_BAND / 2;
+  const head = atmosphere.meterHead;
+  const origin = atmosphere.meterOrigin;
+  const progressX = score != null ? (width * score) / 100 : 0;
+  const headX = Math.min(Math.max(progressX, head / 2), Math.max(width - head / 2, head / 2));
+
   return (
-    <View style={styles.stat}>
-      <View style={styles.statTop}>
-        <ThemedText variant="title">{value}</ThemedText>
-        <ThemedText variant="footnote" tone="tertiary">
-          {unit}
-        </ThemedText>
-      </View>
-      <ThemedText variant="caption" tone="tertiary">
-        {label}
-      </ThemedText>
+    <View
+      onLayout={(event) => {
+        const next = event.nativeEvent.layout.width;
+        setWidth((current) => (current === next ? current : next));
+      }}>
+      {width > 0 ? (
+        <Svg width={width} height={METER_BAND} importantForAccessibility="no-hide-descendants">
+          <Line
+            x1={0}
+            y1={y}
+            x2={width}
+            y2={y}
+            stroke={colors.track}
+            strokeWidth={atmosphere.dottedWidth}
+            strokeDasharray={atmosphere.dottedDash}
+            strokeLinecap="round"
+          />
+          {score != null ? (
+            <>
+              <Line
+                x1={0}
+                y1={y}
+                x2={progressX}
+                y2={y}
+                stroke={colors.foreground}
+                strokeWidth={METER_STROKE}
+                strokeLinecap="round"
+              />
+              <Circle cx={headX} cy={y} r={head / 2} fill={colors.foreground} />
+            </>
+          ) : null}
+          <Circle
+            cx={origin / 2}
+            cy={y}
+            r={origin / 2}
+            fill={colors.card}
+            stroke={colors.foreground}
+            strokeWidth={atmosphere.meterOriginStroke}
+          />
+        </Svg>
+      ) : (
+        <View style={styles.meterPlaceholder} />
+      )}
     </View>
   );
 }
 
 /**
- * Hero is the rolling 7-day speaking score (same figure Analytics leads with).
- * All-time totals sit underneath as SF Pro, not LED on canvas.
- *
- * Title and LED stay in the navy/teal. Hairline, "Last 7 days", and delta sit
- * on `atmosphereScrim` so white ink is never on the pale `heroStopBottom` foot.
+ * Rolling 7-day speaking score on a paper card, with all-time counts in
+ * identity capsules. The score is SF, never LED. The band is vocabulary,
+ * not a grade.
  */
 export function ProgressCard({
   score,
@@ -48,63 +94,61 @@ export function ProgressCard({
 }: ProgressCardProps) {
   const { colors } = useTheme();
   const hours = totalMinutes >= 60 ? Math.round(totalMinutes / 60) : null;
-  const fill = score != null ? score / 100 : 0;
 
   return (
     <View>
-      <AtmosphereSurface mesh="hero" radius="hero">
-        <View style={styles.hero}>
-          <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.divider,
+          },
+        ]}>
+        <View style={styles.head}>
+          <ThemedText variant="eyebrow" tone="tertiary">
             SPEAKING SCORE
           </ThemedText>
-          <View style={styles.scoreRow}>
-            <ScoreValue value={score} size="hero" />
-            {score != null && (
-              <View style={[styles.badge, { backgroundColor: colors.accentBg }]}>
-                <ThemedText variant="caption" weight="bold" tone="accent">
-                  {scoreBand(score).toUpperCase()}
-                </ThemedText>
-              </View>
-            )}
-          </View>
+          {scoreDelta != null && scoreDelta !== 0 ? (
+            <DeltaPill delta={scoreDelta} suffix="this week" />
+          ) : null}
         </View>
-        <View style={[styles.foot, { backgroundColor: colors.atmosphereScrim }]}>
-          <View style={[styles.track, { backgroundColor: colors.ledOff }]}>
-            <View
-              style={[
-                styles.fill,
-                { width: `${Math.round(fill * 100)}%` as `${number}%`, backgroundColor: colors.accent },
-              ]}
-            />
-          </View>
-          <View style={styles.metaRow}>
-            <ThemedText variant="footnote" tone="onAtmosphereMuted">
-              Last 7 days
-            </ThemedText>
-            {scoreDelta != null && scoreDelta !== 0 && (
-              <DeltaPill delta={scoreDelta} suffix="this week" />
-            )}
-          </View>
+        <View style={styles.scoreRow}>
+          <ScoreValue value={score} size="large" />
+          {score != null ? (
+            <View style={[styles.band, { borderColor: colors.outline }]}>
+              <ThemedText variant="caption" weight="semibold" tone="secondary">
+                {scoreBand(score).toUpperCase()}
+              </ThemedText>
+            </View>
+          ) : null}
         </View>
-      </AtmosphereSurface>
-
-      <View style={styles.momentum}>
-        <Stat
-          value={String(hours ?? Math.round(totalMinutes))}
-          unit={hours != null ? 'h' : 'min'}
+        <ScoreMeter score={score} />
+        <ThemedText variant="footnote" tone="tertiary">
+          Last 7 days
+        </ThemedText>
+      </View>
+      <View style={styles.counts}>
+        <MetricCapsule
+          family="minutes"
           label="practice"
+          value={hours ?? Math.round(totalMinutes)}
+          unit={hours != null ? 'h' : 'min'}
+          style={styles.capsule}
         />
-        <View style={[styles.momentumDivider, { backgroundColor: colors.divider }]} />
-        <Stat
-          value={String(totalSessions)}
-          unit=""
+        <MetricCapsule
+          family="sessions"
           label={totalSessions === 1 ? 'session' : 'sessions'}
+          value={totalSessions}
+          unit=""
+          style={styles.capsule}
         />
-        <View style={[styles.momentumDivider, { backgroundColor: colors.divider }]} />
-        <Stat
-          value={String(longestStreak)}
-          unit={longestStreak === 1 ? 'day' : 'days'}
+        <MetricCapsule
+          family="streak"
           label="best streak"
+          value={longestStreak}
+          unit={longestStreak === 1 ? 'day' : 'days'}
+          style={styles.capsule}
         />
       </View>
     </View>
@@ -112,59 +156,41 @@ export function ProgressCard({
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
     padding: spacing.xl,
-    paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  foot: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    gap: spacing.md,
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   scoreRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  badge: {
+  band: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.full,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
   },
-  track: {
-    height: atmosphere.progressStroke,
-    borderRadius: radius.full,
-    overflow: 'hidden',
+  meterPlaceholder: {
+    height: METER_BAND,
   },
-  fill: {
-    height: atmosphere.progressStroke,
-    borderRadius: radius.full,
-  },
-  metaRow: {
+  counts: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  momentum: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.xxs,
-  },
-  stat: {
+  capsule: {
     flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statTop: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
-  },
-  momentumDivider: {
-    width: 1,
-    height: 34,
+    aspectRatio: atmosphere.statTileAspect,
   },
 });

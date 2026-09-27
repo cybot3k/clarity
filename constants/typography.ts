@@ -13,8 +13,11 @@
  * Render these through `<ThemedText variant="..." />` so screens never touch
  * `fontSize`. Pass `weight` to override the default face at the same size.
  *
- * `lineHeight` is set only on the `prose` steps. Multi-line copy needs it; a
- * single-line label doesn't, and setting it there shifts the text in its box.
+ * `lineHeight` is set on the display steps that need it, and on the `prose`
+ * steps. A single-line label doesn't carry it, and setting it there shifts
+ * the text in its box. Faint ink is legal only at 24pt and above.
+ *
+ * Numeral steps do not carry `fontVariant`. `ScoreValue` applies tabular nums.
  */
 
 import type { TextStyle } from 'react-native';
@@ -22,10 +25,22 @@ import type { TextStyle } from 'react-native';
 import { fonts } from './fonts';
 
 export const type = {
-  /** Screen-level heading outside a navigation header. */
-  largeTitle: { fontSize: 34, fontFamily: fonts.bold, letterSpacing: -0.5 },
-  /** Section hero, and the big number in a results header. */
-  title: { fontSize: 22, fontFamily: fonts.bold, letterSpacing: -0.3 },
+  /** Onboarding titles. Sign-in uses `sectionTitle`; paywall uses `largeTitle`. */
+  display: { fontSize: 44, fontFamily: fonts.regular, letterSpacing: -1.4, lineHeight: 46 },
+  /** Score hero. Faint and bold halves share this size inside `ScoreValue`. */
+  numeralHero: { fontSize: 80, fontFamily: fonts.regular, letterSpacing: -3.2 },
+  /** Large score. */
+  numeralLarge: { fontSize: 56, fontFamily: fonts.regular, letterSpacing: -2 },
+  /** Unit beside a hero or large numeral. */
+  numeralUnit: { fontSize: 28, fontFamily: fonts.regular, letterSpacing: -0.6 },
+  /** Fact and record tile numeral. */
+  numeralTile: { fontSize: 28, fontFamily: fonts.medium, letterSpacing: -0.8 },
+  /** Section heading. Also the sign-in statement. */
+  sectionTitle: { fontSize: 24, fontFamily: fonts.medium, letterSpacing: -0.6 },
+  /** Screen-level heading outside a navigation header. Paywall headline. */
+  largeTitle: { fontSize: 34, fontFamily: fonts.medium, letterSpacing: -0.8, lineHeight: 40 },
+  /** Section hero. */
+  title: { fontSize: 22, fontFamily: fonts.semibold, letterSpacing: -0.4, lineHeight: 28 },
   title3: { fontSize: 20, fontFamily: fonts.semibold, letterSpacing: -0.3 },
   /** The default for anything that names something: card titles, row labels. */
   headline: { fontSize: 17, fontFamily: fonts.semibold, letterSpacing: -0.2 },
@@ -36,15 +51,11 @@ export const type = {
   footnote: { fontSize: 13, fontFamily: fonts.medium },
   caption: { fontSize: 12, fontFamily: fonts.medium },
   /** All-caps label above a value. Tracking is wide because it is uppercase. */
-  eyebrow: { fontSize: 12, fontFamily: fonts.bold, letterSpacing: 1 },
+  eyebrow: { fontSize: 12, fontFamily: fonts.semibold, letterSpacing: 0.8, lineHeight: 16 },
   /** Smallest readable step: day letters, tiny pills. */
   micro: { fontSize: 10, fontFamily: fonts.semibold, letterSpacing: 0.5 },
   /** Floating tab-bar labels. Below `micro` on purpose so an 80pt item fits. */
   tabLabel: { fontSize: 9.5, fontFamily: fonts.semibold },
-
-  /** A counter card's hero number. Heavier and larger than `title` because it
-   * is the whole point of its card; the label beside it is the caption. */
-  displayValue: { fontSize: 26, fontFamily: fonts.heavy, letterSpacing: -0.5 },
 
   // --- Marketing site ---
   // These mirror the desktop and mobile ramps in the Paper landing page.

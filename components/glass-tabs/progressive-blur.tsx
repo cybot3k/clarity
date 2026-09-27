@@ -31,6 +31,7 @@ function rgbChannels(color: string): string {
  * gradient, so the material fades continuously with no layer seams —
  * full strength through the first 30%, easing to nothing at the far
  * edge. A soft gradient scrim keeps overlaid chrome legible.
+ * The scrim is the canvas hue, not black. Call sites should not force `tint`.
  */
 export function ProgressiveBlur({
   style,

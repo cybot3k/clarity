@@ -1,9 +1,8 @@
 /**
- * Corner radii. The app had six different card radii (26, 28, 30, 32, 36, 42)
- * doing the same job; this collapses them to two — `lg` for a compact card and
- * `xl` for a hero card — so corners across a screen match.
+ * Corner radii.
  *
- * Pair every non-capsule radius with `borderCurve: 'continuous'`.
+ * Home mapping: stage → `hero` (36), card → `xl` (28), tile → `md` (20),
+ * thumb → `sm` (12). Pair every non-`full` corner with `borderCurve: 'continuous'`.
  *
  * Use `full` for anything circular (avatars, circle buttons, pills) instead of
  * half the element's height: a hardcoded half breaks silently when the size
@@ -12,16 +11,16 @@
 export const radius = {
   /** Chips, focus pills, thin bars. */
   xs: 6,
-  /** Text inputs, small tiles. */
+  /** Text inputs, small tiles, thumbs. */
   sm: 12,
   /** Icon beds and square tiles. */
   md: 20,
-  /** Compact cards: counters, drills, rows, notices. */
-  lg: 20,
-  /** Hero cards: speaking score, daily goal, skill detail. */
-  xl: 24,
-  /** Largest content card. Still a squircle, not a stadium. */
-  hero: 28,
+  /** Compact cards. */
+  lg: 24,
+  /** Cards: score, daily goal shelf, skill detail. */
+  xl: 28,
+  /** Stage. Still a squircle, not a stadium. */
+  hero: 36,
   /** Capsules and circles. */
   full: 9999,
 } as const;

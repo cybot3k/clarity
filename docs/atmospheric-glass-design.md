@@ -1,4 +1,5 @@
 # Clarity Visual Language Redesign: Atmospheric Glass Dashboard
+Status: layout and LED-numeral decisions in this draft are superseded by `docs/layout-structure-plan.md`. Color tokens in this file are unchanged.
 
 | Field | Value |
 | --- | --- |

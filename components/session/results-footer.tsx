@@ -22,7 +22,6 @@ export function ResultsFooter({ onRetry, onDone }: ResultsFooterProps) {
     <View style={styles.wrap} pointerEvents="box-none">
       <ProgressiveBlur
         direction="bottom"
-        tint="dark"
         style={[styles.blur, { top: -CHROME_BLUR_BLEED }]}
       />
       <View

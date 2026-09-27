@@ -10,8 +10,8 @@ export const PASSAGES: Passage[] = [
     category: 'stories',
     skills: ['intonation', 'fluency'],
     artwork: {
-      base: ['rgba(45,75,230,0.95)', 'rgba(48,44,150,0.88)'],
-      blob: ['rgba(255,130,80,0.95)', 'rgba(240,80,190,0.65)'],
+      base: ['rgba(230,45,113,0.95)', 'rgba(150,44,62,0.88)'],
+      blob: ['rgba(80,255,94,0.95)', 'rgba(223,240,80,0.65)'],
     },
     targetWpm: 179,
     text: `You ship your app to production. Congrats! Users install it, and soon your first bug report comes in. You open the production build on your phone, and yep, there it is. You draft a fix, install your development build, and dig in.
@@ -31,8 +31,8 @@ Good tooling rarely announces itself. It just quietly deletes a chore you had st
     category: 'twisters',
     skills: ['accuracy'],
     artwork: {
-      base: ['rgba(16,130,150,0.92)', 'rgba(24,86,180,0.85)'],
-      blob: ['rgba(120,255,190,0.9)', 'rgba(60,210,255,0.55)'],
+      base: ['rgba(16,150,117,0.92)', 'rgba(24,147,180,0.85)'],
+      blob: ['rgba(120,255,137,0.9)', 'rgba(60,255,223,0.55)'],
     },
     targetWpm: 110,
     text: `Peter Piper picked a peck of pickled peppers. A peck of pickled peppers Peter Piper picked. If Peter Piper picked a peck of pickled peppers, where is the peck of pickled peppers Peter Piper picked?
@@ -52,8 +52,8 @@ Fuzzy Wuzzy was a bear. Fuzzy Wuzzy had no hair. Fuzzy Wuzzy wasn't fuzzy, was h
     category: 'narration',
     skills: ['fluency'],
     artwork: {
-      base: ['rgba(130,60,220,0.92)', 'rgba(70,50,190,0.85)'],
-      blob: ['rgba(255,190,120,0.92)', 'rgba(255,110,180,0.55)'],
+      base: ['rgba(220,155,60,0.92)', 'rgba(190,92,50,0.85)'],
+      blob: ['rgba(120,255,211,0.92)', 'rgba(157,255,110,0.55)'],
     },
     targetWpm: 130,
     text: `The morning fog sits low over the valley, softening every edge it touches. Down by the river, the water moves without hurry, folding itself around smooth gray stones. A heron stands at the bank, perfectly still, patient in a way that feels almost geological.
@@ -73,8 +73,8 @@ Evening arrives the way it always does, gradually and then all at once. The ligh
     category: 'news',
     skills: ['pace'],
     artwork: {
-      base: ['rgba(220,120,40,0.92)', 'rgba(190,60,90,0.85)'],
-      blob: ['rgba(255,230,140,0.92)', 'rgba(255,150,90,0.55)'],
+      base: ['rgba(220,183,40,0.92)', 'rgba(190,76,60,0.85)'],
+      blob: ['rgba(240,255,140,0.92)', 'rgba(255,208,90,0.55)'],
     },
     targetWpm: 160,
     text: `Good evening. Here are tonight's top stories.
@@ -96,8 +96,8 @@ That's the briefing. Thank you for listening, and have a wonderful night.`,
     category: 'poetry',
     skills: ['intonation', 'fluency'],
     artwork: {
-      base: ['rgba(40,150,120,0.92)', 'rgba(30,100,160,0.85)'],
-      blob: ['rgba(180,255,220,0.9)', 'rgba(90,220,200,0.5)'],
+      base: ['rgba(40,150,123,0.92)', 'rgba(30,96,160,0.85)'],
+      blob: ['rgba(180,255,222,0.9)', 'rgba(90,220,204,0.5)'],
     },
     targetWpm: 120,
     text: `I wandered lonely as a cloud that floats on high o'er vales and hills, when all at once I saw a crowd, a host, of golden daffodils. Beside the lake, beneath the trees, fluttering and dancing in the breeze.

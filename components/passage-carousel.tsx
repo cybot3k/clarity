@@ -15,7 +15,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { SpeechMark, ThemedText } from '@/components/ui';
+import { AtmosphereSurface, SpeechMark, ThemedText } from '@/components/ui';
 import { atmosphere, radius, spacing, springs } from '@/constants/theme';
 import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,7 +28,7 @@ const VISIBLE_RATIO = ITEMS_CENTERED + PEEK_RATIO * 2;
 /** Outer padding (not margin/gap) on each item keeps the visual gap stable
  * while the card scales down inside its layout box. */
 const ITEM_GAP = spacing.sm;
-const CARD_RADIUS = radius.hero;
+const CARD_RADIUS = radius.xl;
 /** The "Start" pill on a card. Visual only — the whole card is pressable. */
 const BUTTON_HEIGHT = 40;
 /** Width / height of the card's layout box, matched to the design mock. */
@@ -80,8 +80,7 @@ export function PassageCarousel({
       onScroll={onScroll}
       scrollEventThrottle={16}
       // overflow:visible — a ScrollView clips to its bounds by default, and
-      // the cards' glass shadows (plus the interactive press response) extend
-      // past the 6pt item gap. Same fix as the drills row on Practice.
+      // the press scale grows past the card bounds.
       style={{ marginHorizontal: -horizontalPadding, overflow: 'visible' }}
       contentContainerStyle={{ paddingHorizontal: edgePadding }}>
       {items.map((item, index) => (
@@ -119,7 +118,7 @@ const PassageCard = memo(function PassageCard({
   edgePadding,
   onStart,
 }: PassageCardProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const { reduced } = useAtmospherePrefs();
   const pressed = useSharedValue(0);
 
@@ -158,38 +157,9 @@ const PassageCard = memo(function PassageCard({
     onStart(item);
   };
 
-  const cardBody = (
-    <>
-      <View style={styles.content}>
-        <View style={styles.markRow}>
-          <SpeechMark color={colors.accent} height={spacing.xxl} />
-          <ThemedText variant="caption" tone="onArtworkMuted">
-            Speak
-          </ThemedText>
-        </View>
-        <View>
-          <ThemedText variant="headline" weight="bold" tone="onArtwork" numberOfLines={2}>
-            {item.title}
-          </ThemedText>
-          <ThemedText variant="footnote" tone="onArtworkMuted" style={styles.duration}>
-            {item.duration}
-          </ThemedText>
-          <View style={[styles.button, { backgroundColor: colors.inverseSurface }]}>
-            <HugeiconsIcon icon={PlayIcon} size={15} color={colors.inverseLabel} />
-            <ThemedText variant="subhead" tone="inverse">
-              Start
-            </ThemedText>
-          </View>
-        </View>
-      </View>
-    </>
-  );
-
   return (
     <Animated.View style={[{ width: itemWidth }, styles.item, rCardStyle]}>
-      {/* The whole card is the button; the native interactive glass supplies
-          the press feedback, so no pressed-opacity (dropping opacity can
-          also disable the glass effect entirely). */}
+      {/* The whole card is the button. Press feedback is transform scale only. */}
       <Pressable
         onPress={handleStart}
         onPressIn={() => {
@@ -199,18 +169,49 @@ const PassageCard = memo(function PassageCard({
           pressed.value = withSpring(0, springs.snap);
         }}
         style={styles.clip}>
-        <View
+        <AtmosphereSurface
+          mesh="artwork"
+          artwork={item.artwork}
+          radius="xl"
           style={[
             styles.cardFill,
-            styles.cardShape,
             {
-              backgroundColor: colors.card,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: colors.divider,
+              borderColor: colors.frostRim,
             },
           ]}>
-          {cardBody}
-        </View>
+          <View
+            pointerEvents="none"
+            style={[
+              styles.scrim,
+              {
+                experimental_backgroundImage: `linear-gradient(to top, ${colors.artworkScrim} 0%, transparent 100%)`,
+              },
+            ]}
+          />
+          <View style={styles.content}>
+            <View style={styles.markRow}>
+              <SpeechMark color={colors.onArtwork} height={spacing.xl} />
+              <ThemedText variant="caption" tone="onArtworkMuted">
+                Speak
+              </ThemedText>
+            </View>
+            <View>
+              <ThemedText variant="headline" tone="onArtwork" numberOfLines={2}>
+                {item.title}
+              </ThemedText>
+              <ThemedText variant="footnote" tone="onArtworkMuted" style={styles.duration}>
+                {item.duration}
+              </ThemedText>
+              <View style={[styles.button, { backgroundColor: colors.inverseSurface }]}>
+                <HugeiconsIcon icon={PlayIcon} size={15} color={colors.inverseLabel} />
+                <ThemedText variant="subhead" tone="inverse">
+                  Start
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        </AtmosphereSurface>
       </Pressable>
 
       {/* Off-center depth blur, iOS only (parity with the reference app). */}
@@ -218,7 +219,7 @@ const PassageCard = memo(function PassageCard({
         <View style={styles.blurClip} pointerEvents="none">
           <AnimatedBlurView
             animatedProps={rBlurProps}
-            tint="systemThinMaterialDark"
+            tint={scheme === 'dark' ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
             style={StyleSheet.absoluteFill}
           />
         </View>
@@ -232,17 +233,18 @@ const styles = StyleSheet.create({
     aspectRatio: CARD_ASPECT,
     padding: ITEM_GAP,
   },
-  // Deliberately NO overflow:'hidden' here — the interactive glass response
-  // grows past the card bounds and must stay visible.
   clip: {
     flex: 1,
   },
-  cardShape: {
-    borderRadius: CARD_RADIUS,
-    borderCurve: 'continuous',
-  },
   cardFill: {
     flex: 1,
+  },
+  scrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
   },
   content: {
     flex: 1,
@@ -259,11 +261,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   button: {
+    alignSelf: 'flex-start',
     height: BUTTON_HEIGHT,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.full,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.sm,
   },
   blurClip: {

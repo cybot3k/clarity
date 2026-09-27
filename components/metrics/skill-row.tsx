@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/ui';
+import { DottedStroke, ThemedText } from '@/components/ui';
 import { SKILL_LABELS } from '@/constants/metrics';
-import { atmosphere, radius, spacing } from '@/constants/theme';
+import { atmosphere, radius, spacing, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { SkillKey } from '@/types/history';
 
@@ -10,21 +10,29 @@ import { DeltaPill } from './delta-pill';
 import { ScoreValue } from './score-value';
 
 /** Caption line height, held even when a skill has no caption, so every row is
- * the same height and the tick bars below them stay on one grid. */
+ * the same height and the dot meters below them stay on one grid. */
 const CAPTION_HEIGHT = 16;
 
 /** Skill name line height, so a row's height doesn't depend on its glyphs. */
 const NAME_HEIGHT = 20;
 
+const SKILL_INK: Record<SkillKey, keyof ThemeColors> = {
+  accuracy: 'skillAccuracyFrom',
+  fluency: 'skillFluencyFrom',
+  pace: 'skillPaceFrom',
+  fillers: 'skillFillersFrom',
+  intonation: 'skillIntonationFrom',
+};
+
 /**
- * One skill: name, raw-measure caption, score out of 100, change, and a tick
+ * One skill: name, raw-measure caption, score out of 100, change, and a dot
  * meter. Identical on the session summary and on Analytics — only the `caption`
  * and `delta` bases differ ("this session" vs "this week"), which is why both
  * arrive as props rather than being derived here.
  *
  * `score: null` means the skill wasn't measured (a freestyle session has no
  * Articulation, a non-Azure one has no Expression). That renders a dash and an
- * empty track rather than a zero, so "no data" never reads as "you scored 0".
+ * empty meter rather than a zero, so "no data" never reads as "you scored 0".
  */
 export type SkillRowProps = {
   skill: SkillKey;
@@ -40,28 +48,15 @@ export type SkillRowProps = {
 
 export function SkillRow({ skill, score, caption, delta, focus = false }: SkillRowProps) {
   const { colors } = useTheme();
+  const ink = colors[SKILL_INK[skill]];
+  const dots = atmosphere.skillMeter.dots;
+  const lit = score == null ? 0 : Math.round(score / (100 / dots));
 
   return (
     <View style={styles.row}>
       <View style={styles.header}>
         {/* Fixed-width slot keeps names in one vertical lane across all rows. */}
-        <View
-          style={[
-            styles.pip,
-            {
-              backgroundColor:
-                skill === 'accuracy'
-                  ? colors.skillAccuracyFrom
-                  : skill === 'fluency'
-                    ? colors.skillFluencyFrom
-                    : skill === 'pace'
-                      ? colors.skillPaceFrom
-                      : skill === 'fillers'
-                        ? colors.skillFillersFrom
-                        : colors.skillIntonationFrom,
-            },
-          ]}
-        />
+        <View style={[styles.pip, { backgroundColor: ink }]} />
 
         <View style={styles.text}>
           <View style={styles.nameRow}>
@@ -70,6 +65,7 @@ export function SkillRow({ skill, score, caption, delta, focus = false }: SkillR
             </ThemedText>
             {focus && (
               <View style={[styles.focusPill, { backgroundColor: colors.focusBg }]}>
+                <DottedStroke color={colors.focus} radius={radius.full} />
                 <ThemedText variant="micro" weight="bold" tone="focus">
                   FOCUS
                 </ThemedText>
@@ -91,21 +87,18 @@ export function SkillRow({ skill, score, caption, delta, focus = false }: SkillR
         </View>
 
         <View style={styles.trailing}>
-          <ScoreValue value={score} size="sm" tone="ink" />
+          <ScoreValue value={score} size="row" on="canvas" />
           {score != null && delta != null && <DeltaPill delta={delta} hideZero />}
         </View>
       </View>
 
-      <View style={[styles.track, { backgroundColor: colors.track }]}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${Math.round((score != null ? score : 0))}%` as `${number}%`,
-              backgroundColor: colors.accent,
-            },
-          ]}
-        />
+      <View style={styles.meter}>
+        {Array.from({ length: dots }, (_, index) => (
+          <View
+            key={index}
+            style={[styles.dot, { backgroundColor: index < lit ? ink : colors.track }]}
+          />
+        ))}
       </View>
     </View>
   );
@@ -121,8 +114,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pip: {
-    width: 3,
-    height: NAME_HEIGHT,
+    width: atmosphere.identityPip,
+    height: atmosphere.identityPip,
+    marginTop: (NAME_HEIGHT - atmosphere.identityPip) / 2,
     borderRadius: radius.full,
     flexShrink: 0,
   },
@@ -141,8 +135,8 @@ const styles = StyleSheet.create({
   focusPill: {
     paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.xs,
-    borderCurve: 'continuous',
+    borderRadius: radius.full,
+    overflow: 'hidden',
   },
   captionSlot: {
     height: CAPTION_HEIGHT,
@@ -156,13 +150,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.xxs,
   },
-  track: {
-    height: atmosphere.progressStroke,
-    borderRadius: radius.full,
-    overflow: 'hidden',
+  meter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    height: atmosphere.skillMeter.dot,
   },
-  fill: {
-    height: atmosphere.progressStroke,
+  dot: {
+    width: atmosphere.skillMeter.dot,
+    height: atmosphere.skillMeter.dot,
     borderRadius: radius.full,
   },
 });

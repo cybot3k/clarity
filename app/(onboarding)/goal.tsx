@@ -19,6 +19,7 @@ export default function GoalStep() {
   return (
     <OnboardingScreen
       title="How much do you want to practice?"
+      emphasis="practice?"
       subtitle="This sets your daily goal. You can change it any time in Settings."
       ctaTitle="Continue"
       onContinue={() => {

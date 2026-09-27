@@ -1,11 +1,4 @@
-import {
-  AnalyticsUpIcon,
-  CheckmarkBadge01Icon,
-  Clock01Icon,
-  FireIcon,
-  Mic01Icon,
-  StarIcon,
-} from '@hugeicons/core-free-icons';
+import { AnalyticsUpIcon, Clock01Icon, FireIcon, StarIcon } from '@hugeicons/core-free-icons';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -17,10 +10,10 @@ import { SpeakingScoreCard } from '@/components/analytics/speaking-score-card';
 import { EmptyStateCard } from '@/components/empty-state-card';
 import { useMinimizeOnScroll } from '@/components/glass-tabs';
 import { HeaderActions } from '@/components/header-actions';
-import { CounterCard, SkillCard } from '@/components/metrics';
+import { SkillCard } from '@/components/metrics';
 import { SegmentedControl } from '@/components/segmented-control';
 import { IntroReveal } from '@/components/splash';
-import { AtmosphereCanvas, SectionHeader, ThemedText } from '@/components/ui';
+import { AtmosphereCanvas, MetricCapsule, SectionHeader, ThemedText } from '@/components/ui';
 import { spacing, TAB_BAR_SCROLL_INSET } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSessionRecords, useWords } from '@/hooks/use-session-history';
@@ -147,17 +140,17 @@ export default function AnalyticsScreen() {
 
   const header = (
     <>
-      <View style={styles.header}>
-        <IntroReveal order={0} style={styles.greeting}>
-          <ThemedText variant="largeTitle">Analytics</ThemedText>
-          <ThemedText variant="footnote" tone="secondary">
-            How your speaking is moving
-          </ThemedText>
-        </IntroReveal>
-        <IntroReveal order={0} fade={false}>
-          <HeaderActions streak={summary.streak} />
-        </IntroReveal>
-      </View>
+      <IntroReveal order={0} fade={false} style={styles.chromeRow}>
+        <HeaderActions streak={summary.streak} />
+      </IntroReveal>
+      <IntroReveal order={0} style={styles.titleBlock}>
+        <ThemedText variant="display" tone="primary" numberOfLines={2}>
+          Analytics
+        </ThemedText>
+        <ThemedText variant="subhead" weight="regular" tone="secondary">
+          How your speaking is moving
+        </ThemedText>
+      </IntroReveal>
       <IntroReveal order={1} style={styles.control}>
         <SegmentedControl segments={RANGES} selectedIndex={range} onChange={setRange} />
       </IntroReveal>
@@ -170,7 +163,7 @@ export default function AnalyticsScreen() {
     showsVerticalScrollIndicator: false,
     style: { flex: 1 },
     contentContainerStyle: {
-      paddingTop: insets.top + spacing.xxl,
+      paddingTop: insets.top + spacing.sm,
       paddingHorizontal: spacing.xl,
       paddingBottom: TAB_BAR_SCROLL_INSET,
     },
@@ -230,16 +223,11 @@ export default function AnalyticsScreen() {
         />
       </IntroReveal>
       <IntroReveal order={6} fade={false} style={styles.sectionCard}>
-        {/* Three counters, so the second row carries one full-width card rather
-            than a half-width card beside a gap. GlassContainer groups all three
-            so their glass composites as one set; `spacing` is left unset on
-            purpose — raising it past the grid's gaps would fuse the cards into a
-            single blob instead of keeping them a legible grid. */}
+        {/* Identity meshes in a 2×2 grid. Color is each counter's identity, never a grade. */}
         <View style={styles.counterGroup}>
           <View style={styles.counterRow}>
-            <CounterCard
+            <MetricCapsule
               family="minutes"
-              icon={Clock01Icon}
               label="Practice time"
               value={
                 range === 2 && summary.minutes >= 60
@@ -249,32 +237,33 @@ export default function AnalyticsScreen() {
               unit={range === 2 && summary.minutes >= 60 ? 'h' : 'min'}
               delta={summary.minutesDelta ?? undefined}
               deltaSuffix="min"
+              style={styles.capsule}
             />
-            <CounterCard
+            <MetricCapsule
               family="sessions"
-              icon={Mic01Icon}
               label="Sessions"
               value={summary.sessions}
               unit={summary.sessions === 1 ? 'run' : 'runs'}
               delta={summary.sessionsDelta ?? undefined}
+              style={styles.capsule}
             />
           </View>
           <View style={styles.counterRow}>
-            <CounterCard
+            <MetricCapsule
               family="streak"
-              icon={FireIcon}
               label="Day streak"
               value={summary.streak}
               unit={summary.streak === 1 ? 'day' : 'days'}
               delta={summary.streakDelta ?? undefined}
               deltaSuffix={Math.abs(summary.streakDelta ?? 0) === 1 ? 'day' : 'days'}
+              style={styles.capsule}
             />
-            <CounterCard
+            <MetricCapsule
               family="mastered"
-              icon={CheckmarkBadge01Icon}
               label="Words mastered"
               value={mastered}
               unit={mastered === 1 ? 'word' : 'words'}
+              style={styles.capsule}
             />
           </View>
         </View>
@@ -296,15 +285,14 @@ export default function AnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  chromeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    justifyContent: 'flex-end',
   },
-  greeting: {
-    flexShrink: 1,
-    gap: spacing.xs,
+  titleBlock: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   control: {
     marginTop: spacing.xl,
@@ -318,5 +306,8 @@ const styles = StyleSheet.create({
   counterRow: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  capsule: {
+    flex: 1,
   },
 });

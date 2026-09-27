@@ -6,7 +6,7 @@ import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { OnboardingScreen } from '@/components/onboarding';
 import { ThemedText } from '@/components/ui';
-import { spacing } from '@/constants/theme';
+import { radius, spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSetting } from '@/hooks/use-settings';
 import { useTheme } from '@/hooks/use-theme';
@@ -31,6 +31,9 @@ const ROWS: { icon: IconSvgElement; text: string }[] = [
   { icon: Shield01Icon, text: 'Your recording is sent to a speech service to be scored.' },
 ];
 
+/** Permission glyph bed. A single control at 40pt is a circle. */
+const BED_SIZE = 40;
+const GLYPH_SIZE = 20;
 /**
  * Step 5: the permission primer. Our screen explains; the system dialogs ask.
  *
@@ -132,7 +135,7 @@ export default function MicrophoneStep() {
         accessibilityRole="button"
         onPress={finish}
         style={({ pressed }) => [styles.textButton, { opacity: pressed ? 0.6 : 1 }]}>
-        <ThemedText variant="subhead" tone="secondary">
+        <ThemedText variant="subhead" tone="onAtmosphereMuted">
           {state === 'blocked' ? 'Continue without it' : 'Not now'}
         </ThemedText>
       </Pressable>
@@ -141,6 +144,7 @@ export default function MicrophoneStep() {
   return (
     <OnboardingScreen
       title="Clarity needs to hear you"
+      emphasis="hear you"
       subtitle="Your device will ask for each permission in its own dialog."
       ctaTitle={cta.title}
       onContinue={cta.action}
@@ -150,16 +154,28 @@ export default function MicrophoneStep() {
       <View style={styles.rows}>
         {ROWS.map((row) => (
           <View key={row.text} style={styles.row}>
-            <HugeiconsIcon icon={row.icon} size={24} color={colors.secondary} />
-            <ThemedText variant="bodyProse" tone="secondary" style={styles.rowText}>
+            <View
+              style={[
+                styles.bed,
+                {
+                  backgroundColor: colors.fillTranslucent,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: colors.frostRim,
+                },
+              ]}>
+              <HugeiconsIcon icon={row.icon} size={GLYPH_SIZE} color={colors.onAtmosphere} />
+            </View>
+            <ThemedText variant="bodyProse" tone="onAtmosphereMuted" style={styles.rowText}>
               {row.text}
             </ThemedText>
           </View>
         ))}
         {state === 'granted' || state === 'simulated' ? (
           <View style={styles.row}>
-            <HugeiconsIcon icon={Tick02Icon} size={24} color={colors.atmosphereAccent} />
-            <ThemedText variant="bodyProse" style={styles.rowText}>
+            <View style={[styles.bed, { backgroundColor: colors.accent }]}>
+              <HugeiconsIcon icon={Tick02Icon} size={GLYPH_SIZE} color={colors.onAccent} strokeWidth={2} />
+            </View>
+            <ThemedText variant="bodyProse" tone="onAtmosphere" style={styles.rowText}>
               {state === 'simulated'
                 ? 'Scripted speech is ready for this session.'
                 : 'Microphone and speech recognition are on.'}
@@ -184,7 +200,6 @@ function classify(response: {
 const styles = StyleSheet.create({
   rows: {
     gap: spacing.lg,
-    paddingHorizontal: spacing.sm,
   },
   row: {
     flexDirection: 'row',
@@ -193,6 +208,13 @@ const styles = StyleSheet.create({
   },
   rowText: {
     flex: 1,
+  },
+  bed: {
+    width: BED_SIZE,
+    height: BED_SIZE,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textButton: {
     alignSelf: 'center',

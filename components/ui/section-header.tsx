@@ -11,7 +11,7 @@ import { spacing } from '@/constants/theme';
 export function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <>
-      <ThemedText variant="title" style={styles.title}>
+      <ThemedText variant="sectionTitle" style={styles.title}>
         {title}
       </ThemedText>
       {subtitle != null && (

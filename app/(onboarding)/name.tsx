@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { OnboardingScreen } from '@/components/onboarding';
-import { ThemedText } from '@/components/ui';
-import { radius, spacing, type } from '@/constants/theme';
+import { GlassSurface, ThemedText } from '@/components/ui';
+import { spacing, type } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSetting } from '@/hooks/use-settings';
 import { useTheme } from '@/hooks/use-theme';
@@ -55,21 +55,12 @@ export default function NameStep() {
   return (
     <OnboardingScreen
       title="What should we call you?"
+      emphasis="call you?"
       subtitle="Clarity uses your name to greet you on the home screen. Nothing else."
       ctaTitle="Continue"
       onContinue={next}
       note={writeFailed ? 'That name could not be saved right now. You can set it in Settings later.' : null}>
-      {/* Glass is chrome, solid cards are content: the same flat card the
-          passage editor and Settings use. */}
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: colors.card,
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.divider,
-          },
-        ]}>
+      <GlassSurface radius="lg" tint="strong" style={styles.card}>
         <ThemedText variant="footnote" tone="secondary">
           Your name
         </ThemedText>
@@ -90,20 +81,18 @@ export default function NameStep() {
           onSubmitEditing={next}
           style={[styles.input, { color: colors.foreground }]}
         />
-      </View>
+      </GlassSurface>
     </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
     padding: spacing.xl,
     gap: spacing.sm,
   },
   input: {
-    ...type.title3,
+    ...type.title,
     paddingVertical: spacing.xxs,
   },
 });

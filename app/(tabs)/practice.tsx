@@ -9,7 +9,7 @@ import { HeaderActions } from '@/components/header-actions';
 import { PassageCarousel } from '@/components/passage-carousel';
 import { DrillCard } from '@/components/practice/drill-card';
 import { FreestyleCard } from '@/components/practice/freestyle-card';
-import { AddPassageRow, PassageRow } from '@/components/practice/passage-row';
+import { AddPassageRow, PassageGroup, PassageRow } from '@/components/practice/passage-row';
 import { IntroReveal } from '@/components/splash';
 import { AtmosphereCanvas, SectionHeader, ThemedText } from '@/components/ui';
 import { DRILLS } from '@/constants/drills';
@@ -92,23 +92,24 @@ export default function PracticeScreen() {
       nestedScrollEnabled
       style={{ flex: 1 }}
       contentContainerStyle={{
-        paddingTop: insets.top + spacing.xxl,
+        paddingTop: insets.top + spacing.sm,
         paddingHorizontal: SCREEN_PADDING,
         paddingBottom: TAB_BAR_SCROLL_INSET,
       }}>
-      {/* Same header composition as Home: title left, streak + avatar right
-          (glass capsules → transform-only reveal). */}
-      <View style={styles.header}>
-        <IntroReveal order={0} style={styles.greeting}>
-          <ThemedText variant="largeTitle">Practice</ThemedText>
-          <ThemedText variant="footnote" tone="secondary">
-            Passages, drills, or speak off script
-          </ThemedText>
-        </IntroReveal>
+      {/* Chrome floats at the trailing edge; the editorial title sits below it. */}
+      <View style={styles.chromeRow}>
         <IntroReveal order={0} fade={false}>
           <HeaderActions streak={stats.streak} />
         </IntroReveal>
       </View>
+      <IntroReveal order={0} style={styles.titleBlock}>
+        <ThemedText variant="display" tone="primary" numberOfLines={2}>
+          Practice
+        </ThemedText>
+        <ThemedText variant="subhead" weight="regular" tone="secondary">
+          Passages, drills, or speak off script
+        </ThemedText>
+      </IntroReveal>
 
       {/* Recommended: real-data picks; glass cards → transform-only reveal. */}
       <IntroReveal order={1}>
@@ -160,7 +161,7 @@ export default function PracticeScreen() {
         <SectionHeader title="Your passages" subtitle="Practice your own words" />
       </IntroReveal>
       <IntroReveal order={8} fade={false}>
-        <View>
+        <PassageGroup>
           {customPassages.map((passage) => (
             <PassageRow
               key={passage.id}
@@ -170,15 +171,17 @@ export default function PracticeScreen() {
             />
           ))}
           <AddPassageRow onPress={() => router.push('/passage-editor')} />
-        </View>
+        </PassageGroup>
       </IntroReveal>
 
       {groups.map((group) => (
         <IntroReveal key={group.category} order={9} fade={false}>
           <SectionHeader title={group.title} />
-          {group.passages.map((passage) => (
-            <PassageRow key={passage.id} passage={passage} onPress={openContent} />
-          ))}
+          <PassageGroup>
+            {group.passages.map((passage) => (
+              <PassageRow key={passage.id} passage={passage} onPress={openContent} />
+            ))}
+          </PassageGroup>
         </IntroReveal>
       ))}
     </Animated.ScrollView>
@@ -187,21 +190,19 @@ export default function PracticeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  chromeRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
   },
-  greeting: {
-    flexShrink: 1,
-    gap: spacing.xs,
+  titleBlock: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   drillsRow: {
     marginHorizontal: -SCREEN_PADDING,
-    marginTop: spacing.sm,
-    // The interactive glass press response grows past the card bounds; the
-    // scroll view must not clip it (same finding as PassageCarousel).
+    marginTop: spacing.md,
+    // Press scale grows past the card bounds; the scroll view must not clip it.
     overflow: 'visible',
   },
   drillsContent: {
@@ -209,6 +210,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sectionBody: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
 });

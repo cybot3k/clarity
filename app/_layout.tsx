@@ -10,7 +10,7 @@ import {
   ObserveRoot,
   canObserve,
 } from "@/services/observe";
-import { DarkTheme, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { Stack } from "expo-router/stack";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -133,8 +133,8 @@ const SEED_ENABLED = process.env.EXPO_PUBLIC_SEED_HOOKS === "1";
 // before JS content mounts — the surface behind the tab-switch fade always
 // matches the screen color, so no flash.
 function NavThemeProvider({ children }: { children: ReactNode }) {
-  const { colors } = useTheme();
-  const base = DarkTheme;
+  const { colors, scheme } = useTheme();
+  const base = scheme === "dark" ? DarkTheme : DefaultTheme;
 
   const navTheme = {
     ...base,
@@ -190,7 +190,7 @@ function RootNavigator() {
     headerShadowVisible: false,
     headerBlurEffect: "none",
     headerBackground: () => (
-      <ProgressiveBlur direction="top" tint="dark" style={{ flex: 1 }} />
+      <ProgressiveBlur direction="top" style={{ flex: 1 }} />
     ),
   } as const;
 
@@ -249,9 +249,9 @@ function AppShell({
 }) {
   const { revealed, setRevealed, splashDone, setSplashDone } =
     useIntroReveal();
+  const { scheme } = useTheme();
   const { onboardingCompletedAt } = useSettings();
   const { isLoaded: clerkLoaded } = useAuth();
-
   const settingsResolved = useSyncExternalStore(
     subscribeSyncState,
     getSettingsResolved,
@@ -278,7 +278,7 @@ function AppShell({
                 <RootNavigator />
               ) : null}
 
-              <StatusBar style="light" />
+              <StatusBar style={!splashDone || scheme === "dark" ? "light" : "dark"} />
 
               {!splashDone ? (
                 <SplashOverlay

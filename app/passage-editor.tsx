@@ -8,8 +8,9 @@ import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/segmented-control';
-import { PrimaryButton, ThemedText } from '@/components/ui';
-import { radius, spacing, type } from '@/constants/theme';
+import { CHROME_BLUR_BLEED, ProgressiveBlur } from '@/components/glass-tabs';
+import { AtmosphereCanvas, GlassSurface, PrimaryButton, ThemedText } from '@/components/ui';
+import { spacing, type } from '@/constants/theme';
 import { PASSAGE_TEXT_MAX } from '@/convex/limits';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,23 +29,11 @@ const PACE_OPTIONS = [
 const TOOLBAR_TITLE_WIDTH = 200;
 const TOOLBAR_TITLE_HEIGHT = 36;
 
-/** Flat card surface — glass is reserved for the save CTA, matching how the
- * rest of the app keeps solid cards for content and glass for chrome. */
 function EditorCard({ children }: { children: React.ReactNode }) {
-  const { colors } = useTheme();
-
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.divider,
-        },
-      ]}>
+    <GlassSurface radius="lg" tint="strong" style={styles.card}>
       {children}
-    </View>
+    </GlassSurface>
   );
 }
 
@@ -99,8 +88,9 @@ export default function PassageEditorScreen() {
 
   return (
     <>
+      <AtmosphereCanvas mode="ambient">
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}
+        style={{ flex: 1 }}
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={[styles.content, { paddingBottom: spacing.xxxxl + 80 }]}
@@ -174,9 +164,12 @@ export default function PassageEditorScreen() {
         </EditorCard>
 
       </ScrollView>
+      </AtmosphereCanvas>
       <KeyboardStickyView offset={{ closed: 0, opened: bottomPad }}>
         <View style={[styles.saveBar, { paddingBottom: bottomPad }]}>
+          <ProgressiveBlur direction="bottom" style={styles.saveBlur} />
           <PrimaryButton
+            variant="knob"
             title="Save to Library"
             icon={Book02Icon}
             onPress={handleSave}
@@ -228,8 +221,6 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing.xl,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
   },
   caption: {
     marginBottom: spacing.sm,
@@ -261,6 +252,13 @@ const styles = StyleSheet.create({
   saveBar: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
+  },
+  saveBlur: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: -CHROME_BLUR_BLEED,
   },
   closeHit: {
     width: TOOLBAR_TITLE_HEIGHT,

@@ -1,16 +1,14 @@
-import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react-native';
 import { StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/ui';
+import { SelectionMark, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 /** Control sizes, not spacing steps: the row's floor and the leading icon bed. */
 const ROW_MIN_HEIGHT = 72;
 const ICON_BED = 40;
-const CHECK_SIZE = 26;
-const RADIO_SIZE = 24;
+const ICON_SIZE = 22;
 
 export type ChoiceRowProps = {
   title: string;
@@ -32,26 +30,30 @@ export function ChoiceRow({ title, caption, selected, icon }: ChoiceRowProps) {
         <View
           style={[
             styles.iconBed,
-            { backgroundColor: selected ? colors.atmosphereAccentBg : colors.fill },
+            selected
+              ? { backgroundColor: colors.inverseSurface }
+              : {
+                  backgroundColor: colors.fillTranslucent,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: colors.frostRim,
+                },
           ]}>
-          <HugeiconsIcon icon={icon} size={22} color={selected ? colors.atmosphereAccent : colors.secondary} />
+          <HugeiconsIcon
+            icon={icon}
+            size={ICON_SIZE}
+            color={selected ? colors.inverseLabel : colors.secondary}
+          />
         </View>
       ) : null}
       <View style={styles.text}>
-        <ThemedText variant="headline">
-          {title}
-        </ThemedText>
+        <ThemedText variant="headline">{title}</ThemedText>
         {caption ? (
-          <ThemedText variant="footnote" tone="tertiary">
+          <ThemedText variant="footnote" tone="secondary">
             {caption}
           </ThemedText>
         ) : null}
       </View>
-      {selected ? (
-        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={CHECK_SIZE} color={colors.atmosphereAccent} />
-      ) : (
-        <View style={[styles.radio, { borderColor: colors.track }]} />
-      )}
+      <SelectionMark selected={selected} />
     </View>
   );
 }
@@ -75,11 +77,5 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     gap: spacing.xxs,
-  },
-  radio: {
-    width: RADIO_SIZE,
-    height: RADIO_SIZE,
-    borderRadius: radius.full,
-    borderWidth: 2,
   },
 });

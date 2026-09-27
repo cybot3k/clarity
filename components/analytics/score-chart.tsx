@@ -223,6 +223,21 @@ export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
       : null;
   const avgY = avg != null ? yFor(avg, CHART_HEIGHT) : null;
   const weekChips = points.length <= 7;
+  const lensKey = current?.score != null ? current.key : null;
+  const weekNodes =
+    weekChips && width > 0
+      ? points.flatMap((point, index) => {
+          if (point.score == null || point.key === lensKey) return [];
+          return [
+            {
+              key: point.key,
+              x: (width / points.length) * (index + 0.5),
+              y: yFor(point.score, CHART_HEIGHT),
+              partial: point.skillCount < SKILL_ORDER.length,
+            },
+          ];
+        })
+      : [];
   const dash = `${atmosphere.dottedDash[0]} ${atmosphere.dottedDash[1]}`;
 
   if (points.length === 0) return null;
@@ -267,38 +282,58 @@ export function ScoreChart({ points, avg, onScrub }: ScoreChartProps) {
                 />
               )}
               {paths.full ? (
-                <Path d={paths.full} fill="none" stroke={colors.chartLine} strokeWidth={2} />
+                <Path
+                  d={paths.full}
+                  fill="none"
+                  stroke={colors.chartLine}
+                  strokeWidth={atmosphere.chartStroke}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ) : null}
               {paths.partial ? (
                 <Path
                   d={paths.partial}
                   fill="none"
                   stroke={colors.chartPartial}
-                  strokeWidth={2}
+                  strokeWidth={atmosphere.chartStroke}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   strokeDasharray={dash}
                 />
               ) : null}
-              {paths.marks.map((mark) =>
-                mark.kind === 'vertex' ? (
-                  <Circle
-                    key={mark.key}
-                    cx={mark.x}
-                    cy={mark.y}
-                    r={atmosphere.chartVertexSize / 2}
-                    fill={mark.partial ? colors.chartPartial : colors.chartLine}
-                  />
-                ) : (
-                  <Circle
-                    key={mark.key}
-                    cx={mark.x}
-                    cy={mark.y}
-                    r={atmosphere.chartUnscoredSize / 2}
-                    fill="none"
-                    stroke={colors.chartPartial}
-                    strokeWidth={atmosphere.dottedWidth}
-                  />
-                ),
-              )}
+              {paths.marks
+                .filter((mark) => mark.kind === 'unscored' || !weekChips)
+                .map((mark) =>
+                  mark.kind === 'vertex' ? (
+                    <Circle
+                      key={mark.key}
+                      cx={mark.x}
+                      cy={mark.y}
+                      r={atmosphere.chartVertexSize / 2}
+                      fill={mark.partial ? colors.chartPartial : colors.chartLine}
+                    />
+                  ) : (
+                    <Circle
+                      key={mark.key}
+                      cx={mark.x}
+                      cy={mark.y}
+                      r={atmosphere.chartUnscoredSize / 2}
+                      fill="none"
+                      stroke={colors.chartPartial}
+                      strokeWidth={atmosphere.dottedWidth}
+                    />
+                  ),
+                )}
+              {weekNodes.map((node) => (
+                <Circle
+                  key={node.key}
+                  cx={node.x}
+                  cy={node.y}
+                  r={atmosphere.chartVertexSize / 2}
+                  fill={node.partial ? colors.chartPartial : colors.chartLine}
+                />
+              ))}
               {cursor ? (
                 <>
                   <Circle

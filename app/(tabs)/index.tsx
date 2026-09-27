@@ -57,6 +57,10 @@ export default function HomeScreen() {
   const summary = useSpeakingSummary();
   const percent = Math.round(stats.todayProgress * 100);
   const startPractice = () => router.push('/practice');
+  const greet = greeting(now);
+  const splitAt = greet.indexOf(' ');
+  const lead = splitAt === -1 ? greet : greet.slice(0, splitAt);
+  const tail = splitAt === -1 ? '' : greet.slice(splitAt + 1);
 
   // Progress + trouble words are derived only from real history — never demo
   // data. With nothing recorded yet, `progress` is null and the section shows
@@ -120,36 +124,40 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       style={{ flex: 1 }}
       contentContainerStyle={{
-        paddingTop: insets.top + spacing.xxl,
+        paddingTop: insets.top + spacing.sm,
         paddingHorizontal: spacing.xl,
         paddingBottom: TAB_BAR_SCROLL_INSET,
       }}>
-      {/* Intro stagger: chrome (header, slot 0 with the tab bar) first, then
-          the content cascades top-to-bottom. Anything holding a GlassView
-          animates transform-only (fade: false) — glass breaks under animated
-          opacity — and gets its fade-in from the splash overlay instead. */}
-      <View style={styles.header}>
-        {/* flexShrink: the header row also holds the actions, so the title
-            yields width to them and wraps onto a second line rather than
-            pushing them off screen or truncating to "Good Afternoo…". */}
-        <IntroReveal order={0} style={styles.greeting}>
-          <ThemedText variant="largeTitle" numberOfLines={2}>
-            {greeting(now)}
+      {/* Chrome floats; the greeting sits under it. Glass and mesh slots keep
+          fade={false} — glass breaks under animated opacity. */}
+      <IntroReveal order={0} fade={false} style={styles.chromeRow}>
+        <HeaderActions streak={stats.streak} />
+      </IntroReveal>
+      <IntroReveal order={0} style={styles.titleBlock}>
+        <ThemedText variant="display" numberOfLines={2} tone="primary">
+          <ThemedText variant="display" tone="numeralFaint">
+            {lead}
           </ThemedText>
-          <ThemedText variant="footnote" tone="secondary" style={styles.deck}>
-            {percent > 0
-              ? `${percent}% of today's speaking goal`
-              : 'A short session is enough to start'}
-          </ThemedText>
-        </IntroReveal>
-        <IntroReveal order={0} fade={false}>
-          <HeaderActions streak={stats.streak} />
-        </IntroReveal>
-      </View>
-      <IntroReveal order={1}>
+          {'\n'}
+          {tail}
+        </ThemedText>
+        <ThemedText variant="subhead" weight="regular" tone="secondary">
+          {percent > 0 ? (
+            <>
+              <ThemedText variant="subhead" weight="semibold" tone="primary">
+                {`${percent}%`}
+              </ThemedText>
+              {" of today's speaking goal"}
+            </>
+          ) : (
+            'A short session is enough to start'
+          )}
+        </ThemedText>
+      </IntroReveal>
+      <IntroReveal order={1} style={{ marginTop: spacing.xxl }}>
         <WeeklyProgress now={now} todayProgress={stats.todayProgress} history={stats.weeklyHistory} />
       </IntroReveal>
-      <IntroReveal order={2} fade={false}>
+      <IntroReveal order={2} fade={false} style={{ marginTop: spacing.xl }}>
         <DailyGoalCard percent={percent} onStartPractice={startPractice} />
       </IntroReveal>
       <IntroReveal order={3}>
@@ -202,19 +210,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  chromeRow: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
   },
-  greeting: {
-    flexShrink: 1,
-    gap: spacing.xs,
-  },
-  deck: {
-    marginTop: spacing.xxs,
+  titleBlock: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   // Breathing room between a section's title/description block and its card.
   sectionCard: {

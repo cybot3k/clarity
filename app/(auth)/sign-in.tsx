@@ -10,7 +10,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IntroReveal } from '@/components/splash';
-import { PrimaryButton, SpeechMark, ThemedText } from '@/components/ui';
+import { AtmosphereCanvas, PrimaryButton, SpeechMark, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useTheme } from '@/hooks/use-theme';
@@ -55,6 +55,8 @@ const SIMULATOR_AUTH_ERROR = !AUTOMATION_BUILD
       ? 'The simulator test user is not configured.'
       : null;
 const CLERK_TEST_CODE = '424242';
+/** Frost pill. A single control at 36pt is a stadium. */
+const PILL_HEIGHT = 36;
 
 /**
  * The signed-out screen.
@@ -258,17 +260,21 @@ export default function SignInScreen() {
   const disabled = busy || !clerk.loaded;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}>
-      <View style={[styles.hero, { paddingTop: insets.top + spacing.xxxxl }]}>
-        <SpeechMark color={colors.accent} height={spacing.xxxl} />
-        <ThemedText variant="largeTitle">Clarity</ThemedText>
-        <ThemedText variant="subheadProse" tone="secondary">
-          Practice out loud. Track your pace, pronunciation, and the words that slow you down.
+    <AtmosphereCanvas mode="stage">
+      <View style={[styles.wordmark, { paddingTop: insets.top + spacing.xl }]}>
+        <SpeechMark color={colors.accent} height={spacing.xxl} />
+        <ThemedText variant="headline" weight="bold" tone="onAtmosphere">
+          Clarity
         </ThemedText>
+      </View>
+      <View style={styles.hero}>
+        <ThemedText variant="sectionTitle"><ThemedText variant="sectionTitle" weight="bold" tone="onAtmosphere">Practice out loud.</ThemedText><ThemedText variant="sectionTitle" weight="regular" tone="onAtmosphereMuted"> Track your pace, pronunciation, and the words that slow you down.</ThemedText></ThemedText>
         <View style={styles.pills}>
           {['Pace', 'Pronunciation', 'Fluency'].map((label) => (
-            <View key={label} style={[styles.pill, { backgroundColor: colors.fill, borderColor: colors.divider }]}>
-              <ThemedText variant="caption" tone="secondary">
+            <View
+              key={label}
+              style={[styles.pill, { backgroundColor: colors.fillTranslucent, borderColor: colors.frostRim }]}>
+              <ThemedText variant="footnote" weight="semibold" tone="onAtmosphere">
                 {label}
               </ThemedText>
             </View>
@@ -285,7 +291,7 @@ export default function SignInScreen() {
         {failure ? (
           <ThemedText
             variant="footnote"
-            tone="secondary"
+            tone="onAtmosphereMuted"
             style={styles.failure}
           >
             {failure}
@@ -295,7 +301,7 @@ export default function SignInScreen() {
         {!clerk.loaded ? (
           <ThemedText
             variant="footnote"
-            tone="secondary"
+            tone="onAtmosphereMuted"
             style={styles.failure}
           >
             Connecting…
@@ -305,7 +311,7 @@ export default function SignInScreen() {
         {SIMULATOR_AUTH_ERROR ? (
           <ThemedText
             variant="footnote"
-            tone="secondary"
+            tone="onAtmosphereMuted"
             style={styles.failure}
             testID="simulator-auth-config-error"
           >
@@ -345,7 +351,7 @@ export default function SignInScreen() {
               { opacity: pressed || disabled ? 0.6 : 1 },
             ]}
           >
-            <ThemedText variant="subhead" tone="tertiary">
+            <ThemedText variant="subhead" tone="onAtmosphereMuted">
               {SIMULATOR_TEST_EMAIL
                 ? 'Sign in as dev test user'
                 : 'Sign in as dev (development build only)'}
@@ -353,28 +359,34 @@ export default function SignInScreen() {
           </Pressable>
         ) : null}
       </View>
-    </View>
+    </AtmosphereCanvas>
   );
 }
 
 const styles = StyleSheet.create({
+  wordmark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
   hero: {
     flex: 1,
     justifyContent: 'flex-end',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   pills: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   pill: {
+    height: PILL_HEIGHT,
+    justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.full,
-    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
   },
   actions: {

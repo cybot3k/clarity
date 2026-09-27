@@ -3,8 +3,8 @@ import { Text, type TextProps, type TextStyle } from 'react-native';
 import { fonts, type, type TypeVariant } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Which ink a piece of text uses. Maps to the four-step text ramp in `colors`,
- * plus the two status inks that text is allowed to take. */
+/** Which ink a piece of text uses. Steps come from the type ramp, including
+ * `display`, the numeral steps, and `sectionTitle`. */
 export type TextTone =
   | 'primary'
   | 'secondary'
@@ -14,9 +14,12 @@ export type TextTone =
   | 'accent'
   | 'positive'
   | 'focus'
+  | 'numeralFaint'
   | 'onAtmosphere'
   | 'onAtmosphereMuted'
-  | 'axisChip'
+  | 'onAtmosphereFaint'
+  | 'onAccent'
+  | 'onTabHighlight'
   | 'onArtwork'
   | 'onArtworkMuted'
   | 'marketingPrimary'
@@ -37,6 +40,9 @@ export type ThemedTextProps = TextProps & {
  * All text in the app. Screens and components pick a ramp step and an ink tone;
  * neither ever names a `fontSize` or a hex value.
  *
+ * Nested `ThemedText` spans stay on the parent's baseline. `includeFontPadding`
+ * is off so Android does not shift the nested face.
+ *
  * `style` merges last, so a caller can set alignment or `maxWidth` without
  * forking. A caller setting `fontSize` or `color` through `style` is drift — the
  * ramp or the tone list is missing a step.
@@ -56,12 +62,15 @@ export function ThemedText({
     tertiary: colors.tertiary,
     dimmed: colors.dimmed,
     inverse: colors.inverseLabel,
-    accent: colors.accent,
+    accent: colors.accentText,
     positive: colors.positive,
     focus: colors.focus,
+    numeralFaint: colors.numeralFaint,
     onAtmosphere: colors.onAtmosphere,
     onAtmosphereMuted: colors.onAtmosphereMuted,
-    axisChip: colors.axisChipInk,
+    onAtmosphereFaint: colors.onAtmosphereFaint,
+    onAccent: colors.onAccent,
+    onTabHighlight: colors.onTabHighlight,
     onArtwork: colors.onArtwork,
     onArtworkMuted: colors.onArtworkMuted,
     marketingPrimary: colors.marketingInk,
@@ -72,5 +81,10 @@ export function ThemedText({
 
   const face: TextStyle | undefined = weight ? { fontFamily: fonts[weight] } : undefined;
 
-  return <Text style={[type[variant], face, { color: ink[tone] }, style]} {...props} />;
+  return (
+    <Text
+      style={[type[variant], face, { color: ink[tone], includeFontPadding: false }, style]}
+      {...props}
+    />
+  );
 }

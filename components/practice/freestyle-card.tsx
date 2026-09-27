@@ -17,9 +17,8 @@ export type FreestyleCardProps = {
   onStart: (topic: FreestyleTopic) => void;
 };
 
-/** Impromptu-mode card: suggested topic + shuffle, and a Start button.
- * DailyGoalCard's structure — card glass as an absolute sibling so the
- * button/shuffle GlassViews are never nested inside another glass. */
+/** Practice's one hero stage: a suggested topic, a ghost shuffle, and the
+ * screen's only lime knob. Mesh, not glass, so the knob can sit inside it. */
 export function FreestyleCard({ topic, onShuffle, onStart }: FreestyleCardProps) {
   const { colors } = useTheme();
 
@@ -28,30 +27,31 @@ export function FreestyleCard({ topic, onShuffle, onStart }: FreestyleCardProps)
     onShuffle();
   };
 
-  const shuffleContent = (
-    <HugeiconsIcon icon={ShuffleIcon} size={18} color={colors.foreground} strokeWidth={1.5} />
-  );
-
   return (
     <AtmosphereSurface mesh="hero" radius="hero" style={styles.card}>
       <View style={styles.topicRow}>
-        <View style={styles.topicText}>
-          <ThemedText variant="footnote" tone="onAtmosphereMuted">
-            Suggested topic
-          </ThemedText>
-          <ThemedText variant="title3" weight="bold" tone="onAtmosphere">
-            {topic.title}
-          </ThemedText>
-        </View>
+        <ThemedText variant="footnote" tone="onAtmosphereMuted">
+          Suggested topic
+        </ThemedText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Shuffle topic"
           onPress={handleShuffle}
           hitSlop={spacing.sm}
-          style={[styles.shuffle, { backgroundColor: colors.frostFallback }]}>
-          {shuffleContent}
+          style={[
+            styles.shuffle,
+            {
+              backgroundColor: colors.fillTranslucent,
+              borderColor: colors.frostRim,
+            },
+          ]}>
+          <HugeiconsIcon icon={ShuffleIcon} size={18} color={colors.onAtmosphere} strokeWidth={1.5} />
         </Pressable>
       </View>
+
+      <ThemedText variant="largeTitle" tone="onAtmosphere" numberOfLines={2} style={styles.topic}>
+        {topic.title}
+      </ThemedText>
 
       <ThemedText variant="subheadProse" tone="onAtmosphereMuted" style={styles.prompt} numberOfLines={3}>
         {topic.prompt}
@@ -61,7 +61,7 @@ export function FreestyleCard({ topic, onShuffle, onStart }: FreestyleCardProps)
         title="Start Speaking"
         icon={Mic02Icon}
         size="md"
-        variant="solid"
+        variant="knob"
         onPress={() => onStart(topic)}
         style={styles.button}
       />
@@ -79,21 +79,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  topicText: {
-    flex: 1,
-    gap: spacing.xxs,
+  topic: {
+    marginTop: spacing.md,
   },
   shuffle: {
     width: SHUFFLE_SIZE,
     height: SHUFFLE_SIZE,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   prompt: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   button: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
 });

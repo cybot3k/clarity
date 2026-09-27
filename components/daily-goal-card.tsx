@@ -2,115 +2,154 @@ import { Mic02Icon } from '@hugeicons/core-free-icons';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, G } from 'react-native-svg';
 
-import { AtmosphereSurface, LedNumber, PrimaryButton, ThemedText } from '@/components/ui';
-import { atmosphere, spacing } from '@/constants/theme';
+import { ScoreValue } from '@/components/metrics';
+import { AtmosphereSurface, GlassSurface, PrimaryButton, ThemedText } from '@/components/ui';
+import { atmosphere, radius, spacing } from '@/constants/theme';
 import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export type DailyGoalCardProps = {
   percent: number;
   onStartPractice: () => void;
 };
 
-export function DailyGoalCard({ percent, onStartPractice }: DailyGoalCardProps) {
+function GoalRing({ progress }: { progress: number }) {
   const { colors } = useTheme();
   const { reduced } = useAtmospherePrefs();
-  const clamped = Math.max(0, Math.min(percent, 100));
-  const { r, durationMs } = atmosphere.progress.dailyGoal;
-  const stroke = atmosphere.heroStroke;
-  const arcLen = Math.PI * r;
-  const svgW = 2 * r + stroke;
-  const svgH = r + stroke;
-  const cx = svgW / 2;
-  const cy = stroke / 2;
-  // sweep=0: left → down → right. sweep=1 would clip above cy.
-  const d = `M ${cx - r} ${cy} A ${r} ${r} 0 0 0 ${cx + r} ${cy}`;
+  const size = atmosphere.goalRing.size;
+  const stroke = atmosphere.goalRing.stroke;
+  const c = size / 2;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const headR = atmosphere.meterHead / 2;
+  const originR = atmosphere.meterOrigin / 2;
 
-  const progress = useSharedValue(reduced ? clamped / 100 : 0);
+  const p = useSharedValue(reduced ? progress : 0);
   useEffect(() => {
-    progress.value = withTiming(clamped / 100, {
-      duration: reduced ? 0 : durationMs,
+    p.value = withTiming(progress, {
+      duration: reduced ? 0 : atmosphere.goalRing.durationMs,
       easing: Easing.out(Easing.cubic),
     });
-  }, [clamped, durationMs, progress, reduced]);
+  }, [p, progress, reduced]);
 
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: arcLen * (1 - progress.value),
+  const arcProps = useAnimatedProps(() => ({
+    strokeDashoffset: circ * (1 - p.value),
+    opacity: p.value > 0 ? 1 : 0,
   }));
 
-  const windowH = r + atmosphere.ledHeight.hero / 2 + spacing.sm;
+  const headProps = useAnimatedProps(() => {
+    const angle = -Math.PI / 2 + 2 * Math.PI * p.value;
+    return {
+      cx: c + r * Math.cos(angle),
+      cy: c + r * Math.sin(angle),
+      opacity: p.value > 0 ? 1 : 0,
+    };
+  });
+
+  const originProps = useAnimatedProps(() => ({
+    opacity: p.value >= 1 ? 0 : 1,
+  }));
 
   return (
-    <AtmosphereSurface mesh="hero" radius="hero">
-      <View style={styles.inner}>
+    <Svg width={size} height={size} importantForAccessibility="no-hide-descendants">
+      <Circle
+        cx={c}
+        cy={c}
+        r={r}
+        fill="none"
+        stroke={colors.onAtmosphereMuted}
+        strokeWidth={atmosphere.dottedWidth}
+        strokeDasharray={atmosphere.dottedDash}
+        strokeLinecap="round"
+      />
+      <G rotation={-90} origin={[c, c]}>
+        <AnimatedCircle
+          cx={c}
+          cy={c}
+          r={r}
+          fill="none"
+          stroke={colors.onAtmosphere}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          animatedProps={arcProps}
+        />
+      </G>
+      <AnimatedCircle
+        cx={c}
+        cy={c - r}
+        r={originR}
+        fill="none"
+        stroke={colors.onAtmosphere}
+        strokeWidth={atmosphere.meterOriginStroke}
+        animatedProps={originProps}
+      />
+      <AnimatedCircle cx={c} cy={c - r} r={headR} fill={colors.onAtmosphere} animatedProps={headProps} />
+    </Svg>
+  );
+}
+
+/**
+ * Hero mesh stage with today's percent and a dotted goal ring. A frost shelf
+ * overlaps the stage edge and holds the screen's one knob.
+ */
+export function DailyGoalCard({ percent, onStartPractice }: DailyGoalCardProps) {
+  const clamped = Math.max(0, Math.min(percent, 100));
+
+  return (
+    <View>
+      <AtmosphereSurface mesh="hero" radius="hero" style={styles.stage}>
         <ThemedText variant="eyebrow" tone="onAtmosphereMuted">
           TODAY
         </ThemedText>
-        <ThemedText variant="title3" tone="onAtmosphere">
-          Daily speaking goal
-        </ThemedText>
-        <View style={[styles.gaugeWindow, { height: windowH }]}>
-          <Svg width={svgW} height={svgH} style={styles.svg}>
-            <Path
-              d={d}
-              fill="none"
-              stroke={colors.track}
-              strokeWidth={stroke}
-              strokeLinecap="round"
-            />
-            <AnimatedPath
-              d={d}
-              fill="none"
-              stroke={colors.accent}
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={`${arcLen}`}
-              animatedProps={animatedProps}
-            />
-          </Svg>
-          <View style={styles.led} pointerEvents="none">
-            <LedNumber value={clamped} size="hero" unit="%" />
-          </View>
+        <View style={styles.numeralRow}>
+          <ScoreValue value={clamped} size="hero" on="mesh" unit="%" />
+          <GoalRing progress={clamped / 100} />
+        </View>
+      </AtmosphereSurface>
+      <View style={styles.shelf}>
+        <GlassSurface radius="lg" tint="standard" style={StyleSheet.absoluteFill} />
+        <View style={styles.shelfContent}>
+          <ThemedText variant="title3" weight="regular" tone="primary">
+            Daily speaking goal
+          </ThemedText>
+          <PrimaryButton
+            title="Start Practicing"
+            icon={Mic02Icon}
+            variant="knob"
+            size="lg"
+            onPress={onStartPractice}
+          />
         </View>
       </View>
-      <View style={styles.scrim}>
-        <PrimaryButton
-          title="Start Practicing"
-          icon={Mic02Icon}
-          variant="solid"
-          onPress={onStartPractice}
-        />
-      </View>
-    </AtmosphereSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  inner: {
-    padding: spacing.xl,
-    paddingBottom: 0,
-  },
-  gaugeWindow: {
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  svg: {
-    alignSelf: 'center',
-  },
-  led: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  scrim: {
+  stage: {
+    paddingTop: spacing.xl,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: atmosphere.shelfOverlap + spacing.xl,
+  },
+  numeralRow: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  shelf: {
+    marginTop: -atmosphere.shelfOverlap,
+    marginHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+  },
+  shelfContent: {
+    padding: spacing.lg,
+    gap: spacing.md,
   },
 });

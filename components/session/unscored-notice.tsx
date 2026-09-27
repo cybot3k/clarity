@@ -26,7 +26,7 @@ export function UnscoredNotice({ title, detail }: UnscoredNoticeProps) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.iconTile, { backgroundColor: colors.fill }]}>
+      <View style={[styles.iconTile, { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.outline }]}>
         <HugeiconsIcon icon={MicOff01Icon} size={26} color={colors.secondary} strokeWidth={1.5} />
       </View>
       <ThemedText variant="title" style={styles.centered}>

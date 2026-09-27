@@ -1,0 +1,2 @@
+[   56737ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:8081/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.routerRoot=app:0
+[   56753ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8081/favicon.ico:0

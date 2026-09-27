@@ -22,7 +22,7 @@ export type SpeakingScoreCardProps = {
 };
 
 /** The bucket's practice line, e.g. "2 sessions · 14 min". Partial coverage is
- * left to the lighter bar and the footnote: a third line here would grow the
+ * left to the lighter segment and the footnote: a third line here would grow the
  * header and shift the chart under the finger. */
 function activity(point: ScoreChartPoint): string | null {
   if (point.sessions === 0) return null;
@@ -34,13 +34,13 @@ function activity(point: ScoreChartPoint): string | null {
  * scores behind it.
  *
  * The chart plots the same window the score is computed from, so the number,
- * the dashed average line, and the bars can never disagree — and it's the same
+ * the dashed average line, and the curve can never disagree — and it's the same
  * window Home's card reads, so the two screens always show the same figure.
  *
- * Scrubbing the bars swaps this header to that bucket: the eyebrow becomes its
- * date, the hero number its score, and the right column its band and practice.
- * The value stays above the hand instead of under it, and both states are two
- * lines per column so nothing moves while the finger drags.
+ * Scrubbing the curve swaps this header to that bucket: the eyebrow becomes its
+ * date, the hero number its score, and the meta row its band and practice.
+ * The value stays above the hand instead of under it, and both states share
+ * one fixed-height meta row so nothing moves while the finger drags.
  */
 export function SpeakingScoreCard({
   score,
@@ -62,39 +62,44 @@ export function SpeakingScoreCard({
 
   const shown = scrubbed ? scrubbed.score : score;
   const meta = scrubbed ? activity(scrubbed) : null;
+  const bandLabel = scrubbed
+    ? scrubbed.score != null
+      ? scoreBand(scrubbed.score)
+      : scrubbed.sessions > 0
+        ? 'Practiced, not scored'
+        : 'No practice'
+    : score != null
+      ? scoreBand(score)
+      : null;
 
   return (
-    <AtmosphereSurface mesh="hero" radius="hero" grain style={styles.card}>
+    <AtmosphereSurface mesh="hero" radius="hero" style={styles.card}>
       <View style={styles.head}>
-        <View style={styles.headLeft}>
-          <ThemedText variant="eyebrow" tone="onAtmosphereMuted" numberOfLines={1}>
-            {scrubbed ? scrubbed.detail.toUpperCase() : 'SPEAKING SCORE'}
-          </ThemedText>
-          <ScoreValue value={shown} size="hero" />
-        </View>
-        <View style={styles.headRight}>
+        <ThemedText variant="eyebrow" tone="onAtmosphereMuted" numberOfLines={1}>
+          {scrubbed ? scrubbed.detail.toUpperCase() : 'SPEAKING SCORE'}
+        </ThemedText>
+        <ScoreValue value={shown} size="hero" on="mesh" />
+        <View style={styles.meta}>
+          <View style={styles.metaLabel}>
+            {bandLabel != null && (
+              <ThemedText
+                variant="footnote"
+                weight="semibold"
+                tone="onAtmosphere"
+                numberOfLines={1}>
+                {bandLabel}
+              </ThemedText>
+            )}
+          </View>
           {scrubbed ? (
-            <ThemedText variant="footnote" weight="semibold" tone="onAtmosphere" numberOfLines={1}>
-              {scrubbed.score != null
-                ? scoreBand(scrubbed.score)
-                : scrubbed.sessions > 0
-                  ? 'Practiced, not scored'
-                  : 'No practice'}
-            </ThemedText>
+            meta != null ? (
+              <ThemedText variant="caption" tone="onAtmosphereMuted" numberOfLines={1}>
+                {meta}
+              </ThemedText>
+            ) : null
           ) : (
-            <>
-              {delta != null && delta !== 0 && <DeltaPill delta={delta} suffix={deltaSuffix} />}
-              {score != null && (
-                <ThemedText variant="footnote" weight="semibold" tone="onAtmosphere">
-                  {scoreBand(score)}
-                </ThemedText>
-              )}
-            </>
-          )}
-          {meta && (
-            <ThemedText variant="caption" tone="onAtmosphereMuted" numberOfLines={1}>
-              {meta}
-            </ThemedText>
+            delta != null &&
+            delta !== 0 && <DeltaPill delta={delta} suffix={deltaSuffix} on="mesh" />
           )}
         </View>
       </View>
@@ -102,7 +107,11 @@ export function SpeakingScoreCard({
       <View style={styles.chart}>
         <ScoreChart points={points} avg={score} onScrub={setScrubbed} />
         {footnote.length > 0 && (
-          <ThemedText variant="caption" weight="regular" tone="onAtmosphereMuted" style={styles.footnote}>
+          <ThemedText
+            variant="caption"
+            weight="regular"
+            tone="onAtmosphereMuted"
+            style={styles.footnote}>
             {footnote}
           </ThemedText>
         )}
@@ -120,18 +129,17 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   head: {
+    gap: spacing.sm,
+  },
+  meta: {
+    minHeight: spacing.xxl,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  headLeft: {
     gap: spacing.sm,
-    flexShrink: 1,
   },
-  headRight: {
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    flexShrink: 0,
+  metaLabel: {
+    flex: 1,
   },
   chart: {
     gap: spacing.sm,

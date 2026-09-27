@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router/stack';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
+import { useTheme } from '@/hooks/use-theme';
 import type { SessionResult } from '@/types/session';
 
 type SessionContextValue = {
@@ -30,6 +31,7 @@ export function useSessionContext(): SessionContextValue {
 }
 
 export default function SessionLayout() {
+  const { colors } = useTheme();
   const [result, setResultState] = useState<SessionResult | null>(null);
   const [recordId, setRecordId] = useState<string | null>(null);
   const [retryToken, setRetryToken] = useState(0);
@@ -55,6 +57,10 @@ export default function SessionLayout() {
             headerShown: false,
             sheetAllowedDetents: 'fitToContents',
             sheetGrabberVisible: true,
+            // contentStyle paints the scene behind the sheet content. Expo 57
+            // documents it as the scene style; the system sheet would otherwise
+            // stay a light surface.
+            contentStyle: { backgroundColor: colors.atmosphereCanvas },
           }}
         />
       </Stack>

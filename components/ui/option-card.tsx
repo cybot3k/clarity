@@ -1,11 +1,64 @@
+import { Tick02Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 
+import { radius as radiusTokens } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+
 import { GlassSurface } from './glass-surface';
 
+/** Selection disc. A single control at 24pt is a circle. */
+export const SELECTION_MARK_SIZE = 24;
+/** Optical ring weight: 1.5pt reads on a 24pt disc, where a hairline disappears. */
+const SELECTION_RING = 1.5;
+const SELECTION_TICK = 14;
+
+export type SelectionMarkProps = {
+  selected: boolean;
+  /** `accent` is the screen's one lime. `inverse` keeps a screen lime-free. */
+  tone?: 'accent' | 'inverse';
+};
+
+/** The one selection glyph for onboarding, settings, and the paywall. */
+export function SelectionMark({ selected, tone = 'accent' }: SelectionMarkProps) {
+  const { colors } = useTheme();
+  const ring = {
+    width: SELECTION_MARK_SIZE,
+    height: SELECTION_MARK_SIZE,
+    borderRadius: radiusTokens.full,
+  };
+  if (!selected) {
+    return (
+      <View
+        accessible={false}
+        style={[ring, { borderWidth: SELECTION_RING, borderColor: colors.track }]}
+      />
+    );
+  }
+  return (
+    <View
+      accessible={false}
+      style={[
+        ring,
+        {
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: tone === 'inverse' ? colors.inverseSurface : colors.accent,
+        },
+      ]}>
+      <HugeiconsIcon
+        icon={Tick02Icon}
+        size={SELECTION_TICK}
+        strokeWidth={2}
+        color={tone === 'inverse' ? colors.inverseLabel : colors.onAccent}
+      />
+    </View>
+  );
+}
 export type OptionCardProps = {
   selected: boolean;
   onSelect: () => void;
@@ -16,6 +69,8 @@ export type OptionCardProps = {
   accessibilityLabel?: string;
   /** Merged onto the outer Pressable, for margins and min heights. */
   style?: StyleProp<ViewStyle>;
+  /** Stadium on the paywall (`full`); squircle on onboarding (`lg`). */
+  radius?: keyof typeof radiusTokens;
 };
 
 /**
@@ -36,6 +91,7 @@ export function OptionCard({
   children,
   accessibilityLabel,
   style,
+  radius = 'lg',
 }: OptionCardProps) {
   return (
     <Pressable
@@ -47,7 +103,7 @@ export function OptionCard({
         onSelect();
       }}
       style={({ pressed }) => [!isLiquidGlassAvailable() && pressed && styles.pressed, style]}>
-      <GlassSurface radius="lg" interactive style={styles.card}>
+      <GlassSurface radius={radius} interactive style={styles.card}>
         {children}
       </GlassSurface>
     </Pressable>

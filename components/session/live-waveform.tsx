@@ -15,9 +15,9 @@ import { formatClock } from '@/lib/metrics';
 const BAR_COUNT = 26;
 const HALF = BAR_COUNT / 2;
 const SAMPLE_MS = 90;
-const MIN_HEIGHT = 7;
+const MIN_HEIGHT = 3;
 const MAX_HEIGHT = 30;
-const BAR_WIDTH = 3.5;
+const BAR_WIDTH = 3;
 
 /** Holds the timer's width across every clock value so the bars either side of
  * it don't shift as the digits change. */
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: BAR_WIDTH,
-    borderRadius: radius.xs,
+    borderRadius: radius.full,
   },
   timer: {
     ...type.title,

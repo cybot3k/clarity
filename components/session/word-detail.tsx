@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
+import { ScoreValue } from '@/components/metrics';
 import { ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -95,7 +96,12 @@ function Action({
       accessibilityState={{ busy }}
       style={({ pressed }) => [
         styles.action,
-        { backgroundColor: colors.fill, opacity: pressed ? 0.6 : 1 },
+        {
+          backgroundColor: colors.fillTranslucent,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.outline,
+          opacity: pressed ? 0.6 : 1,
+        },
       ]}>
       {busy ? (
         <ActivityIndicator size="small" color={colors.secondary} />
@@ -134,7 +140,9 @@ function Syllables({ word }: { word: ResultWord }) {
             key={`${syllable.syllable}-${i}`}
             style={[
               styles.syllable,
-              { backgroundColor: weak ? colors.focusBg : colors.fillStrong },
+              weak
+                ? { backgroundColor: colors.accentBg }
+                : { backgroundColor: colors.fill },
             ]}>
             <ThemedText variant="footnote" weight="semibold" tone={weak ? 'primary' : 'secondary'}>
               {syllable.grapheme ?? syllable.syllable}
@@ -170,37 +178,33 @@ export function WordDetail({ word, audioUri, onDismiss }: WordDetailProps) {
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic"
+      style={{ backgroundColor: colors.atmosphereCanvas }}
       contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <ThemedText variant="title3" weight="bold" style={styles.word}>
+        <ThemedText variant="display" tone="primary" style={styles.word}>
           {spoken}
         </ThemedText>
-        <View style={styles.headerActions}>
-          {word.score != null ? (
-            <ThemedText variant="footnote" tone="secondary">
-              {Math.round(word.score)}
-              <ThemedText variant="caption" tone="tertiary">
-                {' /100'}
-              </ThemedText>
-            </ThemedText>
-          ) : null}
-          <Pressable
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="Close word details"
-            pressRetentionOffset={spacing.lg}
-            style={({ pressed }) => [
-              styles.close,
-              { backgroundColor: colors.fill, opacity: pressed ? 0.6 : 1 },
-            ]}>
-            <HugeiconsIcon
-              icon={Cancel01Icon}
-              size={spacing.xxl}
-              color={colors.foreground}
-            />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Close word details"
+          pressRetentionOffset={spacing.lg}
+          style={({ pressed }) => [
+            styles.close,
+            {
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.outline,
+              opacity: pressed ? 0.6 : 1,
+            },
+          ]}>
+          <HugeiconsIcon
+            icon={Cancel01Icon}
+            size={spacing.xxl}
+            color={colors.foreground}
+          />
+        </Pressable>
       </View>
+      {word.score != null ? <ScoreValue value={word.score} size="row" on="canvas" /> : null}
 
       <Syllables word={word} />
 
@@ -245,17 +249,12 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
   word: {
     flexShrink: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
   },
   close: {
     width: spacing.xxxxl,
@@ -273,10 +272,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radius.xs,
-    borderCurve: 'continuous',
+    borderRadius: radius.full,
   },
   actions: {
     flexDirection: 'row',
@@ -290,7 +288,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: spacing.xxxxl,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     borderRadius: radius.full,
   },
 });

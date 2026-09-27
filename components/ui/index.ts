@@ -13,7 +13,7 @@ export { GlassSurface, glassSurfaceShape, type GlassSurfaceProps } from './glass
 export { GrainOverlay, type GrainOverlayProps } from './grain-overlay';
 export { LedNumber, type LedNumberProps } from './led-number';
 export { MetricCapsule, type MetricCapsuleProps, type MetricFamily } from './metric-capsule';
-export { OptionCard, type OptionCardProps } from './option-card';
+export { OptionCard, SelectionMark, type OptionCardProps, type SelectionMarkProps } from './option-card';
 export { PrimaryButton, type PrimaryButtonProps } from './primary-button';
 export { SectionHeader } from './section-header';
 export { SpeechMark, type SpeechMarkProps } from './speech-mark';

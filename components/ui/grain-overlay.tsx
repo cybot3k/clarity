@@ -1,11 +1,29 @@
-import { type ViewProps } from 'react-native';
+import { Image, StyleSheet, View, type ImageStyle, type StyleProp } from 'react-native';
 
-export type GrainOverlayProps = ViewProps & {
-  /** Ignored. Grain is not part of the product. */
-  opacity?: number;
+import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
+
+export type GrainOverlayProps = {
+  opacity: number;
+  style?: StyleProp<ImageStyle>;
 };
 
-/** Retired. Renders nothing so a leftover mount cannot texture a surface. */
-export function GrainOverlay(_props: GrainOverlayProps) {
-  return null;
+/**
+ * Repeated grain tile. Renders nothing when the caller passes a non-positive
+ * opacity, or when reduce-motion / reduce-transparency is on. Callers still
+ * mount it; unmounting is this component's job.
+ */
+export function GrainOverlay({ opacity, style }: GrainOverlayProps) {
+  const { reduced } = useAtmospherePrefs();
+  if (opacity <= 0 || reduced) return null;
+
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Image
+        source={require('@/assets/atmosphere/grain.png')}
+        resizeMode="repeat"
+        accessible={false}
+        style={[StyleSheet.absoluteFill, { opacity }, style]}
+      />
+    </View>
+  );
 }

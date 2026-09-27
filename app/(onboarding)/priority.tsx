@@ -33,6 +33,7 @@ export default function PriorityStep() {
   return (
     <OnboardingScreen
       title="What do you want to work on?"
+      emphasis="work on?"
       subtitle="Clarity starts you here. Once you have a few sessions, your own results take over."
       ctaTitle="Continue"
       onContinue={() => {

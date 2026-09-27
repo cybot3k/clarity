@@ -1,155 +1,95 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { atmosphere, LED_GLYPHS, type LedSize } from '@/constants/theme';
+import { LED_GLYPHS } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-import { ThemedText } from './themed-text';
-
 export type LedNumberProps = {
-  value: number | string | null;
-  size?: LedSize;
-  /** "/100", "min", "%", "wpm" — SF Pro, never LED. */
-  unit?: string;
-  /** Default `onAtmosphere`. Pass `ink` on canvas / frost / card. */
-  tone?: 'onAtmosphere' | 'ink';
+  value: number | null;
+  accessibilityLabel?: string;
 };
 
-const UNIT_VARIANT = {
-  sm: 'caption',
-  md: 'footnote',
-  hero: 'title3',
-} as const;
+/** One md spec. 5×7, so a digit is 16.5 × 23.5 and four digits span 78. */
+const DOT = 2.5;
+const PITCH = 3.5;
+const GAP = 4;
+const FOUR_DIGIT_MAX = 78;
+const MANY_DIGITS = 5;
+const MANY_SCALE = 0.8;
 
-function formatValue(value: number | string | null): string {
-  if (value == null) return '---';
-  if (typeof value === 'string') return value;
-  if (Number.isInteger(value) || Math.abs(value - Math.round(value)) < 1e-6) {
-    return String(Math.round(value));
-  }
-  return String(Math.round(value * 10) / 10);
+const SAMPLE = LED_GLYPHS['0'];
+const ROWS = SAMPLE.length;
+const COLS = SAMPLE[0].length;
+
+function glyphString(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return '-';
+  return String(Math.round(value));
 }
 
-function accessibilityFor(
-  display: string,
-  unit?: string,
-  original: number | string | null = null,
-): string {
-  if (original == null) return 'No value';
-  if (unit === '/100') return `${display} out of 100`;
-  if (unit === '%') return `${display} percent`;
-  if (unit) return `${display} ${unit}`;
-  return display;
+function fitPitch(dot: number, pitch: number, gap: number): number {
+  const span = 4 * ((COLS - 1) * pitch + dot) + 3 * gap;
+  if (span <= FOUR_DIGIT_MAX) return pitch;
+  const room = FOUR_DIGIT_MAX - 4 * dot - 3 * gap;
+  const denom = 4 * (COLS - 1);
+  return denom > 0 ? Math.max(0, room / denom) : pitch;
 }
 
 /**
- * 5×7 SVG dot-matrix numerals. Not ThemedText. Circles are hidden from VoiceOver.
+ * 5×7 dot-matrix count. One size. Lit dots are `ledOn`, unlit are `ledOff`.
+ * `null` is the dash glyph. Not ThemedText — circles stay out of VoiceOver.
  */
-export function LedNumber({
-  value,
-  size = 'md',
-  unit,
-  tone = 'onAtmosphere',
-}: LedNumberProps) {
+export function LedNumber({ value, accessibilityLabel }: LedNumberProps) {
   const { colors } = useTheme();
-  const { cell, gap, glow } = atmosphere.led[size];
-  const digitW = 5 * cell + 4 * gap;
-  const digitH = 7 * cell + 6 * gap;
-  const onR = cell / 2;
-  const glowR = (cell + glow) / 2;
-  // Android SVG drops circles below ~1px; sm off-dots are 0.4px without the floor.
-  const offR = Math.max(1, (cell * 0.4) / 2);
-  const isNull = value == null;
-  const display = formatValue(value);
-  const ink = tone === 'ink';
-  const onColor = ink ? colors.foreground : colors.ledOn;
-  const offColor = ink ? colors.track : colors.ledOff;
-  const glowColor = ink ? 'transparent' : colors.ledGlow;
+  const display = glyphString(value);
+  const glyphs = [...display].filter((ch) => ch in LED_GLYPHS);
 
-  const glyphs: { kind: 'digit' | 'dot'; key?: string }[] = [];
-  for (const ch of display) {
-    if (ch === '.') glyphs.push({ kind: 'dot' });
-    else if (ch in LED_GLYPHS) glyphs.push({ kind: 'digit', key: ch });
+  let dot = DOT;
+  let pitch = fitPitch(DOT, PITCH, GAP);
+  let gap = GAP;
+  if (glyphs.length >= MANY_DIGITS) {
+    dot *= MANY_SCALE;
+    pitch *= MANY_SCALE;
+    gap *= MANY_SCALE;
   }
 
-  let width = 0;
-  for (const g of glyphs) {
-    if (g.kind === 'dot') width += gap + cell + gap;
-    else width += digitW + gap;
-  }
-  if (width > 0) width -= gap;
-  const height = digitH + glow;
+  const digitW = (COLS - 1) * pitch + dot;
+  const digitH = (ROWS - 1) * pitch + dot;
+  const width = glyphs.length === 0 ? 0 : glyphs.length * digitW + (glyphs.length - 1) * gap;
+  const onR = dot / 2;
 
-  const circles: { cx: number; cy: number; r: number; fill: string }[] = [];
-  let x = glow / 2;
-  const y0 = glow / 2;
-
-  for (const g of glyphs) {
-    if (g.kind === 'dot') {
-      x += gap;
-      circles.push({
-        cx: x + onR,
-        cy: y0 + 6 * (cell + gap) + onR,
-        r: onR,
-        fill: isNull ? offColor : onColor,
-      });
-      x += cell + gap;
-      continue;
-    }
-    const map = LED_GLYPHS[g.key as keyof typeof LED_GLYPHS];
-    for (let row = 0; row < 7; row++) {
-      for (let col = 0; col < 5; col++) {
-        const on = map[row][col] === '1';
-        const cx = x + col * (cell + gap) + onR;
-        const cy = y0 + row * (cell + gap) + onR;
-        if (on) {
-          if (isNull) {
-            circles.push({ cx, cy, r: onR, fill: offColor });
-          } else {
-            if (!ink) circles.push({ cx, cy, r: glowR, fill: glowColor });
-            circles.push({ cx, cy, r: onR, fill: onColor });
-          }
-        } else {
-          circles.push({ cx, cy, r: offR, fill: offColor });
-        }
+  const circles: { cx: number; cy: number; fill: string }[] = [];
+  let x = 0;
+  for (const ch of glyphs) {
+    const map = LED_GLYPHS[ch as keyof typeof LED_GLYPHS];
+    for (let row = 0; row < ROWS; row++) {
+      const line = map[row] ?? '';
+      for (let col = 0; col < COLS; col++) {
+        circles.push({
+          cx: x + col * pitch + onR,
+          cy: row * pitch + onR,
+          fill: line[col] === '1' ? colors.ledOn : colors.ledOff,
+        });
       }
     }
     x += digitW + gap;
   }
 
+  const label =
+    accessibilityLabel ?? (value == null || !Number.isFinite(value) ? 'No value' : display);
+
   return (
-    <View
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={accessibilityFor(display, unit, value)}
-      style={styles.row}>
-      <Svg
-        width={width + glow}
-        height={height}
-        importantForAccessibility="no-hide-descendants">
+    <View accessible accessibilityRole="text" accessibilityLabel={label} style={styles.row}>
+      <Svg width={width} height={digitH} importantForAccessibility="no-hide-descendants">
         {circles.map((c, i) => (
-          <Circle key={i} cx={c.cx} cy={c.cy} r={c.r} fill={c.fill} accessible={false} />
+          <Circle key={i} cx={c.cx} cy={c.cy} r={onR} fill={c.fill} accessible={false} />
         ))}
       </Svg>
-      {unit ? (
-        <ThemedText
-          variant={UNIT_VARIANT[size]}
-          tone={ink ? 'primary' : 'onAtmosphere'}
-          style={styles.unit}>
-          {unit}
-        </ThemedText>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: atmosphere.led.sm.gap,
-  },
-  unit: {
-    marginLeft: atmosphere.led.sm.gap,
+    alignSelf: 'flex-start',
   },
 });

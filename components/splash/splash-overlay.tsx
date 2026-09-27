@@ -9,6 +9,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { GrainOverlay } from '@/components/ui';
+import { atmosphere } from '@/constants/theme';
+import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
 
 /** White mark on the black canvas. The dark Lottie is the inverse artwork. */
@@ -39,7 +42,8 @@ export type SplashOverlayProps = {
 /** Full-screen Lottie splash rendered above the app. Plays once, then fades
  * out into the app background while the content intro staggers in beneath. */
 export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
+  const { reduced } = useAtmospherePrefs();
   const viewRef = useRef<LottieView>(null);
   const finishedRef = useRef(false);
   const holdRef = useRef(hold);
@@ -96,6 +100,7 @@ export function SplashOverlay({ onReveal, onDone, hold = false }: SplashOverlayP
     <Animated.View
       pointerEvents="box-none"
       style={[StyleSheet.absoluteFill, { backgroundColor: colors.splashBackdrop }, fadeStyle]}>
+      {reduced ? null : <GrainOverlay opacity={atmosphere.grain.mesh[scheme]} />}
       <LottieView
         ref={viewRef}
         source={LIGHT}

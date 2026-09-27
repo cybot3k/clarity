@@ -1,11 +1,13 @@
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { AtmosphereSurface, ThemedText } from '@/components/ui';
 import { DRILL_META } from '@/constants/drills';
 import { SKILL_ICONS, SKILL_LABELS } from '@/constants/metrics';
-import { radius, spacing } from '@/constants/theme';
+import { atmosphere, radius, spacing, springs } from '@/constants/theme';
+import { useAtmospherePrefs } from '@/hooks/use-atmosphere-prefs';
 import { useTheme } from '@/hooks/use-theme';
 import type { Passage } from '@/types/session';
 
@@ -20,12 +22,17 @@ export type DrillCardProps = {
   onStart: (drill: Passage) => void;
 };
 
-/** Compact card for the horizontal drills row. Content lives INSIDE the
- * GlassView so the interactive press response fires (same finding as
- * PassageCard); the icon bed is a plain view — never a nested glass. */
+/** Artwork tile for the horizontal drills row. Press feedback is scale only,
+ * so the parent row must not clip it. */
 export function DrillCard({ drill, onStart }: DrillCardProps) {
   const { colors } = useTheme();
+  const { reduced } = useAtmospherePrefs();
   const meta = DRILL_META[drill.id];
+  const pressed = useSharedValue(0);
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * (1 - atmosphere.pressScale) }],
+  }));
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -33,35 +40,70 @@ export function DrillCard({ drill, onStart }: DrillCardProps) {
   };
 
   return (
-    <Pressable accessibilityRole="button" onPress={handlePress} style={styles.item}>
-      <AtmosphereSurface mesh="artwork" artwork={drill.artwork} radius="lg" style={styles.card}>
-        <View style={[styles.iconBed, { backgroundColor: colors.frostFallback }]}>
-          <HugeiconsIcon
-            icon={meta ? SKILL_ICONS[meta.skill] : SKILL_ICONS.accuracy}
-            size={22}
-            color={colors.accent}
-            strokeWidth={1.5}
-          />
-        </View>
-        <ThemedText variant="callout" tone="onAtmosphere" numberOfLines={1}>
-          {drill.title}
-        </ThemedText>
-        {meta != null && (
-          <ThemedText
-            variant="footnote"
-            weight="regular"
-            tone="onAtmosphereMuted"
-            style={styles.blurb}
-            numberOfLines={1}>
-            {meta.blurb}
-          </ThemedText>
-        )}
-        <ThemedText variant="caption" tone="onAtmosphere" style={styles.meta}>
-          {meta ? `${SKILL_LABELS[meta.skill]} · ` : ''}
-          {drill.duration}
-        </ThemedText>
-      </AtmosphereSurface>
-    </Pressable>
+    <Animated.View style={[styles.item, pressStyle]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={handlePress}
+        onPressIn={() => {
+          if (!reduced) pressed.value = withSpring(1, springs.snap);
+        }}
+        onPressOut={() => {
+          pressed.value = withSpring(0, springs.snap);
+        }}
+        style={styles.item}>
+        <AtmosphereSurface
+          mesh="artwork"
+          artwork={drill.artwork}
+          radius="xl"
+          style={[
+            styles.card,
+            { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.frostRim },
+          ]}>
+          <View>
+            <ThemedText variant="title3" weight="regular" tone="onArtwork" numberOfLines={2}>
+              {drill.title}
+            </ThemedText>
+            {meta != null && (
+              <ThemedText
+                variant="footnote"
+                weight="regular"
+                tone="onArtworkMuted"
+                numberOfLines={2}
+                style={styles.blurb}>
+                {meta.blurb}
+              </ThemedText>
+            )}
+          </View>
+          <View style={styles.footer}>
+            <View
+              style={[
+                styles.iconWell,
+                {
+                  backgroundColor: colors.fillTranslucent,
+                  borderColor: colors.frostRim,
+                },
+              ]}>
+              <HugeiconsIcon
+                icon={meta ? SKILL_ICONS[meta.skill] : SKILL_ICONS.accuracy}
+                size={22}
+                color={colors.onArtwork}
+                strokeWidth={1.5}
+              />
+            </View>
+            <View style={styles.meta}>
+              {meta != null && (
+                <ThemedText variant="caption" weight="semibold" tone="onArtwork">
+                  {SKILL_LABELS[meta.skill]}
+                </ThemedText>
+              )}
+              <ThemedText variant="caption" tone="onArtworkMuted">
+                {drill.duration}
+              </ThemedText>
+            </View>
+          </View>
+        </AtmosphereSurface>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -70,21 +112,28 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
   },
   card: {
-    flex: 1,
+    width: CARD_WIDTH,
+    aspectRatio: atmosphere.drillAspect,
     padding: spacing.lg,
-  },
-  iconBed: {
-    width: ICON_BED_SIZE,
-    height: ICON_BED_SIZE,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
   },
   blurb: {
     marginTop: spacing.xxs,
   },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  iconWell: {
+    width: ICON_BED_SIZE,
+    height: ICON_BED_SIZE,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   meta: {
-    marginTop: spacing.sm,
+    alignItems: 'flex-end',
   },
 });

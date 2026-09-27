@@ -23,6 +23,7 @@ export default function AccentStep() {
   return (
     <OnboardingScreen
       title="Which accent do you speak?"
+      emphasis="you speak?"
       subtitle="Your reading is scored against this accent. Picking the one you actually speak stops your own vowels being counted as mistakes."
       ctaTitle="Continue"
       onContinue={() => {

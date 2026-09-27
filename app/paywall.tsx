@@ -1,11 +1,5 @@
-import {
-  Cancel01Icon,
-  CheckmarkCircle02Icon,
-  Crown02Icon,
-  Tick02Icon,
-} from '@hugeicons/core-free-icons';
+import { ArrowRight02Icon, Cancel01Icon, Crown02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +7,15 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
 
-import { OptionCard, PrimaryButton, ThemedText } from '@/components/ui';
+import {
+  AtmosphereCanvas,
+  AtmosphereSurface,
+  GlassSurface,
+  OptionCard,
+  PrimaryButton,
+  SelectionMark,
+  ThemedText,
+} from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSubscription } from '@/hooks/use-subscription';
@@ -41,6 +43,22 @@ const PLAN_LABELS: Partial<Record<string, { title: string; caption: string }>> =
   [PLAN_MONTHLY]: { title: 'Monthly', caption: 'per month' },
   [PLAN_WEEKLY]: { title: 'Weekly', caption: 'per week' },
 };
+
+/** Hairline close circle. A single control at 40pt is a circle. */
+const CLOSE_SIZE = 40;
+/** Chip row controls. A single control at 40pt is a circle or stadium. */
+const CHIP_SIZE = 40;
+/** Feature tick disc. A single control at 28pt is a circle. */
+const FEATURE_DISC = 28;
+const FEATURE_TICK = 14;
+/** Stadium plan row. A single control at 64pt uses `radius.full`. */
+const PLAN_MIN_HEIGHT = 64;
+/** Three stadiums plus the two gaps between them, so the slab does not jump when plans arrive. */
+const PLANS_SLOT_MIN_HEIGHT = PLAN_MIN_HEIGHT * 3 + spacing.sm * 2;
+/** Save badge. A single control at 22pt is a stadium. */
+const SAVE_BADGE_HEIGHT = 22;
+/** Unavailable crown tile. An icon tile at 64pt uses `radius.md`, not a stadium. */
+const ICON_TILE = 64;
 
 /** Annual first because it is the default selection and carries the badge. */
 function sortPlans(packages: PurchasesPackage[]): PurchasesPackage[] {
@@ -74,18 +92,30 @@ function PurchasesUnavailable() {
   const { colors } = useTheme();
 
   return (
-    <View style={styles.centered}>
-      <View style={[styles.iconTile, { backgroundColor: colors.card }]}>
-        <HugeiconsIcon icon={Crown02Icon} size={32} color={colors.proGold} />
+    <AtmosphereCanvas mode="ambient">
+      <View style={styles.centered}>
+        <AtmosphereSurface mesh="hero" radius="hero" style={styles.unavailableSlab}>
+          <View
+            style={[
+              styles.iconTile,
+              {
+                backgroundColor: colors.fillTranslucent,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.frostRim,
+              },
+            ]}>
+            <HugeiconsIcon icon={Crown02Icon} size={32} color={colors.proGold} />
+          </View>
+          <ThemedText variant="title" tone="onAtmosphere" style={styles.centeredText}>
+            Clarity Pro is unavailable
+          </ThemedText>
+          <ThemedText variant="subheadProse" tone="onAtmosphereMuted" style={styles.centeredText}>
+            This build has no store connected, so plans cannot load. Try the app on a device or
+            simulator build.
+          </ThemedText>
+        </AtmosphereSurface>
       </View>
-      <ThemedText variant="title" style={styles.centeredText}>
-        Clarity Pro is unavailable
-      </ThemedText>
-      <ThemedText variant="subheadProse" tone="secondary" style={styles.centeredText}>
-        This build has no store connected, so plans cannot load. Try the app on a device or
-        simulator build.
-      </ThemedText>
-    </View>
+    </AtmosphereCanvas>
   );
 }
 
@@ -109,18 +139,18 @@ function PlanCard({
   const perMonth = isAnnual ? plan.product.pricePerMonthString : null;
 
   return (
-    <OptionCard selected={selected} onSelect={onSelect} style={styles.planCard}>
+    <OptionCard radius="full" selected={selected} onSelect={onSelect} style={styles.planCard}>
       <View style={styles.planRow}>
-        {selected ? (
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={26} color={colors.atmosphereAccent} />
-        ) : (
-          <View style={[styles.radio, { borderColor: colors.track }]} />
-        )}
+        <SelectionMark selected={selected} tone="inverse" />
         <View style={styles.planTitle}>
           <ThemedText variant="title3">{labels.title}</ThemedText>
           {savings !== null && (
-            <View style={[styles.saveBadge, { backgroundColor: colors.atmosphereAccentBg }]}>
-              <ThemedText variant="caption" weight="semibold" tone="accent">
+            <View
+              style={[
+                styles.saveBadge,
+                { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.frostRim },
+              ]}>
+              <ThemedText variant="caption" weight="semibold" tone="primary">
                 Save {savings}%
               </ThemedText>
             </View>
@@ -248,115 +278,141 @@ export default function PaywallScreen() {
   if (!available) return <PurchasesUnavailable />;
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xxl },
-      ]}
-      showsVerticalScrollIndicator={false}>
-      {/* Pressable wraps the glass rather than the reverse: GlassView renders a
-          native material, so the touch target has to sit above it. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-        onPress={close}
-        style={styles.close}>
-        <GlassView isInteractive style={styles.closeCircle}>
-          <HugeiconsIcon icon={Cancel01Icon} size={18} color={colors.secondary} strokeWidth={2} />
-        </GlassView>
-      </Pressable>
-      <View style={styles.brandRow}>
-        <HugeiconsIcon icon={Crown02Icon} size={28} color={colors.proGold} />
-        <ThemedText variant="title">Clarity</ThemedText>
-        {isLiquidGlassAvailable() ? (
-          <GlassView glassEffectStyle="regular" tintColor={colors.inverseSurface} style={styles.proBadge}>
-            <ThemedText variant="callout" tone="inverse">
-              Pro
+    <AtmosphereCanvas mode="ambient">
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xxl },
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.chipRow}>
+          <GlassSurface radius="full" style={styles.crownCircle}>
+            <HugeiconsIcon icon={Crown02Icon} size={20} color={colors.proGold} />
+          </GlassSurface>
+          <View style={[styles.brandPill, { backgroundColor: colors.inverseSurface }]}>
+            <ThemedText variant="callout" weight="regular" tone="inverse">
+              Clarity
             </ThemedText>
-          </GlassView>
-        ) : (
-          <View style={[styles.proBadge, { backgroundColor: colors.inverseSurface }]}>
-            <ThemedText variant="callout" tone="inverse">
+            <ThemedText variant="callout" weight="bold" tone="inverse">
               Pro
             </ThemedText>
           </View>
-        )}
-      </View>
+        </View>
 
-      <ThemedText variant="largeTitle" style={styles.headline}>
-        Get the full power of Clarity
-      </ThemedText>
-
-      <View style={styles.features}>
-        {FEATURES.map((feature) => (
-          <View key={feature} style={styles.featureRow}>
-            <HugeiconsIcon icon={Tick02Icon} size={20} color={colors.atmosphereAccent} strokeWidth={2} />
-            <ThemedText variant="bodyProse" tone="secondary" style={styles.featureText}>
-              {feature}
+        <AtmosphereSurface mesh="hero" radius="hero" style={styles.slab}>
+          <View style={styles.headerRow}>
+            <ThemedText variant="largeTitle" style={styles.headline}>
+              <ThemedText variant="largeTitle" weight="regular" tone="onAtmosphereMuted">Get the full power of </ThemedText>
+              <ThemedText variant="largeTitle" weight="bold" tone="onAtmosphere">Clarity</ThemedText>
             </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={close}
+              style={({ pressed }) => [
+                styles.close,
+                {
+                  backgroundColor: colors.fillTranslucent,
+                  borderColor: colors.frostRim,
+                  opacity: pressed ? 0.6 : 1,
+                },
+              ]}>
+              <HugeiconsIcon
+                icon={Cancel01Icon}
+                size={18}
+                color={colors.onAtmosphere}
+                strokeWidth={1.5}
+              />
+            </Pressable>
           </View>
-        ))}
-      </View>
 
-      <View style={styles.flexSpacer} />
+          <View style={styles.features}>
+            {FEATURES.map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <View
+                  style={[
+                    styles.featureDisc,
+                    {
+                      backgroundColor: colors.fillTranslucent,
+                      borderColor: colors.frostRim,
+                    },
+                  ]}>
+                  <HugeiconsIcon
+                    icon={Tick02Icon}
+                    size={FEATURE_TICK}
+                    color={colors.onAtmosphere}
+                    strokeWidth={2}
+                  />
+                </View>
+                <ThemedText variant="subheadProse" tone="onAtmosphere" style={styles.featureText}>
+                  {feature}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
 
-      {plans === null && !loadFailed ? (
-        <View style={styles.plansLoading}>
-          <ActivityIndicator color={colors.secondary} />
-        </View>
-      ) : loadFailed ? (
-        <View style={styles.plansLoading}>
-          <ThemedText variant="subheadProse" tone="secondary" style={styles.centeredText}>
-            Plans could not load. Check your connection and reopen this screen.
-          </ThemedText>
-        </View>
-      ) : (
-        <View style={styles.plans}>
-          {plans?.map((plan) => (
-            <PlanCard
-              key={plan.identifier}
-              plan={plan}
-              selected={plan.identifier === selectedId}
-              savings={plan.packageType === PLAN_ANNUAL ? savings : null}
-              onSelect={() => setSelectedId(plan.identifier)}
-            />
-          ))}
-        </View>
-      )}
+          <View style={styles.flexSpacer} />
 
-      <PrimaryButton
-        title="Continue with Clarity Pro"
-        onPress={buy}
-        disabled={busy || !selected}
-        style={styles.cta}
-      />
+          {plans === null && !loadFailed ? (
+            <View style={styles.plansLoading}>
+              <ActivityIndicator color={colors.onAtmosphere} />
+            </View>
+          ) : loadFailed ? (
+            <View style={styles.plansLoading}>
+              <ThemedText variant="subheadProse" tone="onAtmosphereMuted" style={styles.centeredText}>
+                Plans could not load. Check your connection and reopen this screen.
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={styles.plans}>
+              {plans?.map((plan) => (
+                <PlanCard
+                  key={plan.identifier}
+                  plan={plan}
+                  selected={plan.identifier === selectedId}
+                  savings={plan.packageType === PLAN_ANNUAL ? savings : null}
+                  onSelect={() => setSelectedId(plan.identifier)}
+                />
+              ))}
+            </View>
+          )}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={restorePurchase}
-        disabled={busy}
-        style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
-        <ThemedText variant="subhead" tone="secondary">
-          Restore purchase
-        </ThemedText>
-      </Pressable>
+          <PrimaryButton
+            variant="knob"
+            icon={ArrowRight02Icon}
+            title="Continue with Clarity Pro"
+            onPress={buy}
+            disabled={busy || !selected}
+          />
+        </AtmosphereSurface>
 
-      <View style={styles.legalRow}>
-        <Pressable onPress={() => Linking.openURL(TERMS_URL)} hitSlop={spacing.sm}>
-          <ThemedText variant="caption" tone="tertiary">
-            Terms of Use
+        <Pressable
+          accessibilityRole="button"
+          onPress={restorePurchase}
+          disabled={busy}
+          style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
+          <ThemedText variant="subhead" tone="onAtmosphereMuted">
+            Restore purchase
           </ThemedText>
         </Pressable>
-        <ThemedText variant="caption" tone="dimmed">
-          |
-        </ThemedText>
-        <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={spacing.sm}>
-          <ThemedText variant="caption" tone="tertiary">
-            Privacy Policy
+
+        <View style={styles.legalRow}>
+          <Pressable onPress={() => Linking.openURL(TERMS_URL)} hitSlop={spacing.sm}>
+            <ThemedText variant="caption" tone="onAtmosphereMuted">
+              Terms of Use
+            </ThemedText>
+          </Pressable>
+          <ThemedText variant="caption" tone="onAtmosphereMuted">
+            |
           </ThemedText>
-        </Pressable>
-      </View>
-    </ScrollView>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_URL)} hitSlop={spacing.sm}>
+            <ThemedText variant="caption" tone="onAtmosphereMuted">
+              Privacy Policy
+            </ThemedText>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </AtmosphereCanvas>
   );
 }
 
@@ -365,63 +421,85 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
+    gap: spacing.lg,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  crownCircle: {
+    width: CHIP_SIZE,
+    height: CHIP_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandPill: {
+    height: CHIP_SIZE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+  },
+  slab: {
+    flexGrow: 1,
+    padding: spacing.xl,
+    gap: spacing.lg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  headline: {
+    flex: 1,
   },
   close: {
-    alignSelf: 'flex-start',
-    marginBottom: spacing.lg,
-  },
-  closeCircle: {
-    width: 36,
-    height: 36,
+    width: CLOSE_SIZE,
+    height: CLOSE_SIZE,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   centered: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
+  },
+  unavailableSlab: {
+    padding: spacing.xxl,
+    alignItems: 'center',
     gap: spacing.md,
   },
   centeredText: {
     textAlign: 'center',
   },
   iconTile: {
-    width: 64,
-    height: 64,
+    width: ICON_TILE,
+    height: ICON_TILE,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  proBadge: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headline: {
-    textAlign: 'center',
-    marginTop: spacing.xxxl,
-    marginBottom: spacing.xxxl,
   },
   features: {
-    gap: spacing.lg,
-    paddingHorizontal: spacing.sm,
+    gap: spacing.md,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  featureDisc: {
+    width: FEATURE_DISC,
+    height: FEATURE_DISC,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   featureText: {
     flex: 1,
@@ -431,15 +509,15 @@ const styles = StyleSheet.create({
     minHeight: spacing.xxxl,
   },
   plans: {
-    gap: spacing.lg,
+    gap: spacing.sm,
   },
   plansLoading: {
-    minHeight: 120,
+    minHeight: PLANS_SLOT_MIN_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
   planCard: {
-    minHeight: 72,
+    minHeight: PLAN_MIN_HEIGHT,
     justifyContent: 'center',
   },
   planRow: {
@@ -447,13 +525,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.full,
-    borderWidth: 2,
+    paddingVertical: spacing.sm,
   },
   planTitle: {
     flex: 1,
@@ -466,12 +538,10 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   saveBadge: {
-    borderRadius: radius.full,
+    height: SAVE_BADGE_HEIGHT,
+    justifyContent: 'center',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  cta: {
-    marginTop: spacing.xxl,
+    borderRadius: radius.full,
   },
   pressed: {
     opacity: 0.85,
@@ -479,13 +549,11 @@ const styles = StyleSheet.create({
   textButton: {
     alignSelf: 'center',
     padding: spacing.md,
-    marginTop: spacing.xs,
   },
   legalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-    marginTop: spacing.xs,
   },
 });

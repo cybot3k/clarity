@@ -1,36 +1,14 @@
 import { Crown02Icon, FireIcon, Settings01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassContainer, GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
-import { ThemedText } from '@/components/ui';
+import { GlassSurface, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useTheme } from '@/hooks/use-theme';
-
-function HeaderCapsule({
-  style,
-  children,
-}: {
-  style: StyleProp<ViewStyle>;
-  children: React.ReactNode;
-}) {
-  const { colors } = useTheme();
-  if (!isLiquidGlassAvailable()) {
-    return <View style={[style, { backgroundColor: colors.frostFallback }]}>{children}</View>;
-  }
-  return (
-    <GlassView
-      glassEffectStyle="regular"
-      isInteractive
-      tintColor={colors.glassTintStrong}
-      style={style}>
-      {children}
-    </GlassView>
-  );
-}
 
 function proButtonLabel(isLoading: boolean, isPro: boolean): string {
   if (isLoading) return 'Checking your subscription';
@@ -85,21 +63,21 @@ export function HeaderActions({ streak }: { streak: number }) {
         accessibilityState={{ disabled: isLoading }}
         accessibilityLabel={proButtonLabel(isLoading, access.isPro)}
         accessibilityHint={`Current streak: ${streak}`}>
-        <HeaderCapsule style={styles.streak}>
+        <GlassSurface radius="full" tint="strong" interactive style={styles.streak}>
           <HugeiconsIcon
             icon={access.isPro ? Crown02Icon : FireIcon}
             size={24}
             color={access.isPro ? colors.proGold : colors.streakFlame}
           />
-          <ThemedText variant="callout" weight="medium">
+          <ThemedText variant="callout" weight="medium" tone="primary">
             {streak}
           </ThemedText>
-        </HeaderCapsule>
+        </GlassSurface>
       </Pressable>
       <Pressable onPress={openSettings} accessibilityRole="button" accessibilityLabel="Settings">
-        <HeaderCapsule style={styles.cog}>
-          <HugeiconsIcon icon={Settings01Icon} size={24} color={colors.tertiary} />
-        </HeaderCapsule>
+        <GlassSurface radius="full" tint="strong" interactive style={styles.cog}>
+          <HugeiconsIcon icon={Settings01Icon} size={24} color={colors.secondary} />
+        </GlassSurface>
       </Pressable>
     </GlassContainer>
   );
@@ -114,9 +92,9 @@ const styles = StyleSheet.create({
   streak: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     paddingLeft: spacing.sm,
-    paddingRight: spacing.lg,
+    paddingRight: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
   },

@@ -1,6 +1,6 @@
 import { useClerk, useUser } from '@clerk/expo';
 import { useMutation } from 'convex/react';
-import { Cancel01Icon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import * as Haptics from 'expo-haptics';
 import { Observe } from '@/services/observe';
@@ -8,11 +8,11 @@ import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 
-import { ThemedText } from '@/components/ui';
+import { AtmosphereCanvas, GlassSurface, SelectionMark, ThemedText } from '@/components/ui';
 import { ACCENTS, hasPhonemeDetail } from '@/constants/accents';
 import { GOAL_OPTIONS } from '@/constants/goals';
 import { SKILL_GOALS, SKILL_LABELS, SKILL_ORDER } from '@/constants/metrics';
-import { radius, spacing, type } from '@/constants/theme';
+import { spacing, type } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSetting } from '@/hooks/use-settings';
 import { useTheme } from '@/hooks/use-theme';
@@ -24,7 +24,6 @@ import type { SkillKey } from '@/types/history';
 const TOOLBAR_TITLE_WIDTH = 200;
 const TOOLBAR_TITLE_HEIGHT = 36;
 
-const CHECK_SIZE = 22;
 const MAX_NAME = 24;
 
 /** Minimum row height, so a one-line row still reads as a tappable list row and
@@ -32,23 +31,9 @@ const MAX_NAME = 24;
  * the icon tiles elsewhere. */
 const ROW_MIN_HEIGHT = 56;
 
-/** Grouped rows on one card, matching the flat-card convention the passage
- * editor uses: glass is chrome, solid cards are content. */
+/** Grouped rows on one frost card. Switch and TextInput are not glass, so this does not nest. */
 function SettingsCard({ children }: { children: React.ReactNode }) {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.divider,
-        },
-      ]}>
-      {children}
-    </View>
-  );
+  return <GlassSurface radius="lg" tint="strong">{children}</GlassSurface>;
 }
 
 /** A hairline between rows inside a card, inset past the row's padding. */
@@ -69,7 +54,6 @@ function ChoiceListRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onSelect}
@@ -78,25 +62,21 @@ function ChoiceListRow({
       accessibilityLabel={caption ? `${title}, ${caption}` : title}
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}>
       <View style={styles.rowText}>
-        <ThemedText variant="headline">
-          {title}
-        </ThemedText>
+        <ThemedText variant="headline">{title}</ThemedText>
         {caption ? (
-          <ThemedText variant="footnote" tone="tertiary">
+          <ThemedText variant="footnote" tone="secondary">
             {caption}
           </ThemedText>
         ) : null}
       </View>
-      {selected ? (
-        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={CHECK_SIZE} color={colors.atmosphereAccent} />
-      ) : null}
+      {selected ? <SelectionMark selected tone="inverse" /> : null}
     </Pressable>
   );
 }
 
 function Eyebrow({ children }: { children: string }) {
   return (
-    <ThemedText variant="eyebrow" tone="tertiary" style={styles.eyebrow}>
+    <ThemedText variant="eyebrow" tone="onAtmosphereMuted" style={styles.eyebrow}>
       {children}
     </ThemedText>
   );
@@ -104,7 +84,7 @@ function Eyebrow({ children }: { children: string }) {
 
 function Blurb({ children }: { children: string }) {
   return (
-    <ThemedText variant="footnoteProse" tone="secondary" style={styles.sectionBlurb}>
+    <ThemedText variant="footnoteProse" tone="onAtmosphereMuted" style={styles.sectionBlurb}>
       {children}
     </ThemedText>
   );
@@ -243,8 +223,9 @@ export default function SettingsScreen() {
 
   return (
     <>
+      <AtmosphereCanvas mode="ambient">
       <ScrollView
-        style={{ flex: 1, backgroundColor: colors.atmosphereCanvas }}
+        style={{ flex: 1 }}
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
@@ -332,7 +313,7 @@ export default function SettingsScreen() {
             is the difference between a user making an informed trade and one
             wondering why the per-sound tips stopped appearing. */}
         {!hasPhonemeDetail(accentLocale) ? (
-          <ThemedText variant="footnoteProse" tone="tertiary" style={styles.note}>
+          <ThemedText variant="footnoteProse" tone="onAtmosphereMuted" style={styles.note}>
             Per-sound feedback, the tips that name a sound like /θ/, is available for American
             English only. You still get word and syllable scores.
           </ThemedText>
@@ -396,11 +377,12 @@ export default function SettingsScreen() {
         </SettingsCard>
 
         {writeFailed ? (
-          <ThemedText variant="footnoteProse" tone="tertiary" style={styles.note}>
+          <ThemedText variant="footnoteProse" tone="onAtmosphereMuted" style={styles.note}>
             That preference could not be saved. Your device may be out of storage.
           </ThemedText>
         ) : null}
       </ScrollView>
+      </AtmosphereCanvas>
 
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.View hidesSharedBackground>
@@ -451,11 +433,6 @@ const styles = StyleSheet.create({
   },
   sectionBlurb: {
     marginBottom: spacing.md,
-  },
-  card: {
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',

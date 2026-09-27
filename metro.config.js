@@ -1,3 +1,14 @@
+const dns = require('dns');
+
+// Windows resolves `localhost` to ::1, and Node then listens on that IPv6
+// address only. `expo start --localhost` binds that way, while Expo Go on
+// Android (and `adb reverse`) connects to IPv4 127.0.0.1. The manifest
+// request never reaches Metro, and Expo Go reports
+// "Uncaught Error: java.io.IOException: Failed to download remote update".
+if (process.platform === 'win32' && typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 const { FileStore } = require('metro-cache');

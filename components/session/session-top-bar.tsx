@@ -1,12 +1,12 @@
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CHROME_BLUR_BLEED, ProgressiveBlur } from '@/components/glass-tabs';
-import { ThemedText } from '@/components/ui';
+import { GlassSurface, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -23,7 +23,6 @@ type CircleButtonProps = {
 };
 
 function CircleButton({ onPress, disabled, children }: CircleButtonProps) {
-  const { colors } = useTheme();
   const hasGlass = isLiquidGlassAvailable();
 
   return (
@@ -34,13 +33,9 @@ function CircleButton({ onPress, disabled, children }: CircleButtonProps) {
       disabled={disabled}
       hitSlop={spacing.sm}
       style={({ pressed }) => (disabled || (!hasGlass && pressed)) && styles.pressed}>
-      {hasGlass ? (
-        <GlassView glassEffectStyle="regular" isInteractive={!disabled} style={styles.circle}>
-          {children}
-        </GlassView>
-      ) : (
-        <View style={[styles.circle, { backgroundColor: colors.fillStrong }]}>{children}</View>
-      )}
+      <GlassSurface radius="full" interactive={!disabled} style={styles.circle}>
+        {children}
+      </GlassSurface>
     </Pressable>
   );
 }
@@ -71,7 +66,6 @@ export function SessionTopBar({
     <>
       <ProgressiveBlur
         direction="top"
-        tint="dark"
         style={[
           styles.blur,
           { height: insets.top + BAR_TOP_GAP + BUTTON_SIZE + CHROME_BLUR_BLEED },

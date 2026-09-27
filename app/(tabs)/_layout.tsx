@@ -27,7 +27,6 @@ function StatusBarBlur() {
   return (
     <ProgressiveBlur
       direction="top"
-      tint="dark"
       style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top }}
     />
   );

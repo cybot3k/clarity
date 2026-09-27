@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { PrimaryButton, ThemedText } from '@/components/ui';
+import { AtmosphereCanvas, AtmosphereSurface, PrimaryButton, ThemedText } from '@/components/ui';
 import { spacing } from '@/constants/theme';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSubscription } from '@/hooks/use-subscription';
@@ -56,16 +56,20 @@ export default function ManageSubscriptionScreen() {
 
   if (!CustomerCenterView) {
     return (
-      <View style={styles.fallback}>
-        <ThemedText variant="title" style={styles.fallbackTitle}>
-          Subscriptions are unavailable here
-        </ThemedText>
-        <ThemedText variant="subheadProse" tone="secondary" style={styles.fallbackBody}>
-          Manage billing in a development or store build. Expo Go cannot talk to
-          the App Store or Play Billing.
-        </ThemedText>
-        <PrimaryButton title="Close" onPress={close} />
-      </View>
+      <AtmosphereCanvas mode="ambient">
+        <View style={styles.fallback}>
+          <AtmosphereSurface mesh="hero" radius="hero" style={styles.slab}>
+            <ThemedText variant="title" tone="onAtmosphere" style={styles.fallbackTitle}>
+              Subscriptions are unavailable here
+            </ThemedText>
+            <ThemedText variant="subheadProse" tone="onAtmosphereMuted" style={styles.fallbackBody}>
+              Manage billing in a development or store build. Expo Go cannot talk to
+              the App Store or Play Billing.
+            </ThemedText>
+            <PrimaryButton title="Close" onPress={close} />
+          </AtmosphereSurface>
+        </View>
+      </AtmosphereCanvas>
     );
   }
 
@@ -100,7 +104,10 @@ const styles = StyleSheet.create({
   fallback: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  slab: {
+    padding: spacing.xxl,
     gap: spacing.md,
   },
   fallbackTitle: {

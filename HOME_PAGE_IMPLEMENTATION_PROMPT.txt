@@ -1,0 +1,1261 @@
+================================================================================
+CLARITY — HOME SCREEN LAYOUT CUTOVER — STANDALONE IMPLEMENTATION BRIEF
+================================================================================
+Paste this entire file as your first message to a fresh Claude Code session
+that has this repository open on disk. That session has ZERO memory of any
+prior conversation — treat every instruction below as the complete truth.
+Do not assume it can see any other document, chat log, or agent output.
+
+This brief is self-contained. Where it says "read <path>", actually open that
+file with your file tools before writing code — do not guess its contents.
+
+--------------------------------------------------------------------------------
+0. WHAT YOU ARE DOING
+--------------------------------------------------------------------------------
+Clarity is an Expo SDK 57 React Native speech-practice app. A design pass
+already produced an approved layout contract at `docs/layout-structure-plan.md`.
+Your job in THIS session is to implement that contract for ONE screen only:
+the Home tab (the app's first page, route `/`, file `app/(tabs)/index.tsx`).
+
+Do not implement Practice, Analytics, session screens, onboarding, settings,
+paywall, or the passage editor. Those are separately scoped and untouched by
+this brief, even where the design contract mentions them for cross-reference.
+
+You WILL also touch two files that are shared chrome physically rendered on
+the Home screen: the floating tab dock (`components/glass-tabs/glass-tab-bar.tsx`)
+and the header capsules (`components/header-actions.tsx`). Both keep their
+existing exports and are also used by Practice/Analytics — you are changing
+their SIZE/SHAPE per the contract, not their behavior, and you are not adding
+anything that only makes sense on those other screens.
+
+--------------------------------------------------------------------------------
+1. REQUIRED READING BEFORE YOU WRITE ANY CODE
+--------------------------------------------------------------------------------
+Read these, in this order, in full:
+  1. `AGENTS.md` (repo root) — the design-system rules. Non-negotiable.
+  2. `docs/layout-structure-plan.md`, sections "## 2. Rules", "## 4. Shared
+     constants and pattern index", "## Dock and root top bar", and "## Home"
+     (roughly lines 1–560). This is the approved visual/layout contract this
+     brief translates into a concrete diff. If anything in THIS brief seems to
+     contradict that document, this brief wins for Home-screen scope decisions
+     (it resolves several "TBD"-style choices the document leaves general),
+     but the document's tokens, geometry, and rules still apply.
+  3. `constants/theme.ts`, `constants/spacing.ts`, `constants/radius.ts`,
+     `constants/typography.ts`, `constants/colors.ts`, `constants/atmosphere.ts`
+     — the design tokens. NEVER hardcode a value these files already name.
+  4. The current source of every file you will change or replace (listed in
+     section 3). Read each one fully before touching it.
+
+--------------------------------------------------------------------------------
+2. NON-NEGOTIABLE RULES (violating any of these is a failed implementation)
+--------------------------------------------------------------------------------
+- No hardcoded visual values. No hex colors, no raw `fontSize`, no raw spacing
+  or radius numbers outside `constants/`. A genuine optical one-off may stay
+  inline ONLY with a comment explaining why.
+- Colors resolve through `useTheme()`. NEVER `useColorScheme()` plus a local
+  light/dark map.
+- All words render via `<ThemedText variant=… tone=… />`. Weight comes from
+  the `weight` prop (which maps to a `fontFamily`), NEVER the `fontWeight`
+  style property.
+- Frosted/glass surfaces use `<GlassSurface>` (or the raw `GlassView`/
+  `expo-glass-effect` exactly as the existing chrome files already do).
+  Nested `GlassView` does not render on iOS 26: a card whose child needs glass
+  renders its `GlassSurface` as an absolute-fill SIBLING, never a nested child.
+- Icons are Hugeicons Free via `<HugeiconsIcon icon={...} size={...} color=…/>`
+  from `@hugeicons/react-native`, with the icon symbol imported from
+  `@hugeicons/core-free-icons`. NEVER guess an icon name. Before importing an
+  icon you are not 100% sure exists, run:
+      glob "node_modules/@hugeicons/core-free-icons/dist/*<Keyword>*"
+  and use the exact export name it returns. Never use emoji or any other icon
+  library.
+- Do not add Skia, `expo-linear-gradient`, shadow styles, or elevation. This
+  app has no shadow token set on purpose — depth comes from glass and mesh
+  gradients only.
+- NO dot-matrix, LED, or segment-style digits anywhere. All numerals render
+  as plain SF Pro Rounded through the existing `ScoreValue` component (or
+  plain `ThemedText` with `fontVariant: ['tabular-nums']` where `ScoreValue`
+  doesn't fit). `components/ui/led-number.tsx` and `components/ui/metric-
+  capsule.tsx` are NOT used by anything you write. Do not delete them in this
+  pass — `app/(tabs)/analytics.tsx` still imports `MetricCapsule` and that
+  screen is out of scope here.
+- Do not invent copy. Every string you render must already exist in the repo
+  (in the files listed below) or be an existing data value formatted the way
+  the current code already formats it (e.g. "12 min", "82 /100"). If a slot in
+  the design contract has no existing string backing it, OMIT the slot —
+  do not write a new sentence to fill it.
+- Do not change routes, navigation targets, scoring math, Convex, Clerk, or
+  any business logic. This is a visual/layout diff only. Every `router.push`
+  / `router.navigate` target stays exactly what it is today unless this brief
+  explicitly says otherwise (it does not).
+- Screens import components; components import tokens. `app/(tabs)/index.tsx`
+  may use `spacing` directly for its own layout (margins/gaps between the
+  blocks it composes), but it may not name a color, a font size, or a radius.
+- Preserve every bit of existing functional behavior in files you edit
+  (loading states, error alerts, accessibility labels/hints, haptics). Only
+  change what this brief tells you to change.
+- Skip formatters, linters, and the full test suite while you work. Run a
+  TypeScript check only at the very end (see section 8), and fix whatever it
+  reports in the files you touched.
+
+--------------------------------------------------------------------------------
+3. SCOPE LOCK — EXACT FILE LIST
+--------------------------------------------------------------------------------
+FILES YOU WILL CREATE (new):
+  - components/home/goal-row.tsx
+  - components/home/passage-rail.tsx
+  - components/home/progress-rail.tsx
+
+FILES YOU WILL REWRITE (keep the same export name/signature described below):
+  - app/(tabs)/index.tsx
+  - components/weekly-progress.tsx
+  - components/words-to-master.tsx
+  - components/header-actions.tsx
+  - components/glass-tabs/glass-tab-bar.tsx
+
+FILES YOU WILL DELETE, but ONLY after the grep check in section 7 confirms
+nothing else imports them:
+  - components/daily-goal-card.tsx
+  - components/progress-card.tsx
+
+FILES YOU MUST NOT TOUCH (even though some are mentioned inside the design
+contract for cross-screen consistency — they belong to a different, separately
+scoped pass):
+  - app/(tabs)/practice.tsx
+  - app/(tabs)/analytics.tsx
+  - app/(tabs)/_layout.tsx
+  - app/paywall.tsx
+  - app/passage-editor.tsx
+  - app/settings.tsx
+  - app/manage-subscription.tsx
+  - app/(auth)/sign-in.tsx
+  - app/(onboarding)/**
+  - app/session/**
+  - components/ui/primary-button.tsx
+  - components/passage-carousel.tsx
+  - components/ui/metric-capsule.tsx
+  - components/ui/led-number.tsx
+  - components/metrics/delta-label.tsx
+  - components/metrics/delta-pill.tsx
+  - components/empty-state-card.tsx
+  - components/segmented-control.tsx
+  - components/glass-tabs/minimize-context.tsx (the hook stays; Practice and
+    Analytics still call `useMinimizeOnScroll()` — you are only making Home
+    stop calling it, not deleting the hook)
+  - constants/*.ts (read-only; do not add or edit tokens for this pass — every
+    value you need already exists)
+
+--------------------------------------------------------------------------------
+4. DESIGN TOKENS YOU WILL USE (from constants/, do not re-derive these)
+--------------------------------------------------------------------------------
+```json
+{
+  "spacing": { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 20, "xxl": 24, "xxxl": 32, "xxxxl": 48 },
+  "radius": { "xs": 6, "sm": 12, "md": 20, "lg": 24, "xl": 28, "hero": 36, "full": 9999 },
+  "controlModule": 48,
+  "glyphOnModule": 20,
+  "bottomBarHeight": 64,
+  "bottomBarOffsetFormula": "Math.max(insets.bottom - spacing.lg, spacing.md)",
+  "homeDockScrollInset": 114,
+  "homeDockScrollInsetFormula": "18 (bottom offset) + 64 (bar height) + spacing.xxxl (32)",
+  "borderCurve": "continuous (every non-'full' corner, per existing convention)",
+  "typeSteps": {
+    "eyebrow": "12, semibold, uppercase, wide tracking — ALL-CAPS role only",
+    "largeTitle": "34, medium, lineHeight 40 (greeting)",
+    "title3": "20, semibold (card/tile titles)",
+    "headline": "17, semibold (button/control labels)",
+    "subhead": "15, semibold (small values, secondary labels) — pass weight=\"regular\" for the regular-weight variant this brief calls for in a few spots",
+    "footnote": "13, medium (captions, most-used step)",
+    "callout": "16, semibold (delta rows)"
+  },
+  "scoreValueSizes": { "hero": 80, "large": 56, "tile": 28, "row": "title(22)+bold" },
+  "pressScale": "atmosphere.pressScale (0.98)",
+  "dayChipSize_DEPRECATED_FOR_HOME": "atmosphere.dayChipSize (28) — NOT used by the new week-tile row; that value stays for components/analytics/score-chart.tsx (DayChip 'axis' intent), which you are not touching",
+  "sweepDurationCO07": 900
+}
+```
+
+Colors you will reference through `useTheme().colors` (never inline the hex):
+`background` (canvas, painted by AtmosphereCanvas already), `foreground`
+(primary ink on light frost), `secondary`, `tertiary`, `onAtmosphere`,
+`onAtmosphereMuted`, `onAtmosphereFaint`, `onArtwork`, `onArtworkMuted`,
+`accent`, `onAccent`, `ctaTrack`, `ctaLabel`, `inverseSurface`, `inverseLabel`,
+`fillTranslucent`, `frostRim`, `divider`, `track`, `outline`, `positive`,
+`streakFlame`, `proGold`, `tabHighlight`, `onTabHighlight`, `glassTint`,
+`glassTintStrong`, `frostFallback`.
+
+--------------------------------------------------------------------------------
+5. ICONS
+--------------------------------------------------------------------------------
+Already confirmed to exist and already imported somewhere in this repo — you
+may import these by the exact names shown, from `@hugeicons/core-free-icons`:
+```json
+{
+  "Home07Icon": "dock, Home tab — used in app/(tabs)/_layout.tsx",
+  "AudioLinesIcon": "dock, Practice tab",
+  "Chart02Icon": "dock, Analytics tab",
+  "FireIcon": "streak, not-Pro — components/header-actions.tsx",
+  "Crown02Icon": "streak, Pro — components/header-actions.tsx",
+  "Settings01Icon": "settings cog — components/header-actions.tsx",
+  "Mic02Icon": "start-practicing action circle — components/daily-goal-card.tsx",
+  "PlayIcon": "play/start discs — components/passage-carousel.tsx, components/words-to-master.tsx",
+  "VolumeHighIcon": "speaker button — components/words-to-master.tsx",
+  "AnalyticsUpIcon": "empty-state icon — app/(tabs)/index.tsx"
+}
+```
+NOT yet confirmed — you MUST glob for these before importing, and use exactly
+what the glob returns (do not guess a numbered variant):
+```json
+{
+  "checkTickIcon": "for the met-day badge in the new week-tile row — glob node_modules/@hugeicons/core-free-icons/dist for *Tick* or *Check*",
+  "arrowUpRightIcon": "for the progress-tile action disc — glob for *ArrowUpRight* or *ArrowExternal*",
+  "clockIcon": "for the 'practice minutes' tile identity disc — glob for *Clock* or *Time*",
+  "micIcon_forProgressTile": "for the 'sessions' tile identity disc — reuse Mic02Icon if it fits the role, otherwise glob"
+}
+```
+
+--------------------------------------------------------------------------------
+6. HOME-SCREEN LAYOUT CONTRACT (authoritative geometry for this pass)
+--------------------------------------------------------------------------------
+Screen basis: width 393pt (scale everything else relatively — do not hardcode
+pixel widths, use flex/percentages/`useWindowDimensions` exactly like the
+existing carousel code does). `insets.top` / `insets.bottom` come from
+`useSafeAreaInsets()`.
+
+TOP-TO-BOTTOM ORDER (all on one `Animated.ScrollView` — no separate "canvas"
+vs "sheet" component; the sheet is a styled `View` inside the same scroll):
+
+```json
+[
+  { "block": "chrome row", "height": 48, "content": "SpeechMark (left) + HeaderActions (right)" },
+  { "gap": "spacing.xxxxl (48)" },
+  { "block": "greeting (TX-01)", "content": "two-line ThemedText, line 1 ink, line 2 muted" },
+  { "gap": "spacing.xxl (24)" },
+  { "block": "GoalRow (TX-05 + CO-07 + CH-10)", "content": "daily goal numeral+gauge, split progress bar, Start Practicing capsule" },
+  { "gap": "spacing.xxxl (32)" },
+  { "block": "sheet begins", "content": "glass panel, top corners radius.hero, bleeds to x-inset spacing.sm from screen edge" },
+  { "sheet_content": [
+      { "block": "WeeklyProgress (CO-06)", "content": "own header row + 7 tiles" },
+      { "gap": "spacing.xxxl (32)" },
+      { "block": "SectionHeader", "props": { "title": "For you", "subtitle": "Sharpen your speaking with these passages" } },
+      { "block": "PassageRail (CO-04 of CO-03)", "content": "horizontal snap rail of PASSAGES" },
+      { "gap": "spacing.xxxl (32)" },
+      { "block": "SectionHeader", "props": { "title": "Your progress", "subtitle": "Where your speaking stands right now" } },
+      { "block": "ProgressRail (CO-04 of CO-02L)", "content": "4-tile rail or empty block" },
+      { "conditional": "toMaster.length > 0", "then": [
+          { "gap": "spacing.xxxl (32)" },
+          { "block": "SectionHeader", "props": { "title": "Words to master", "subtitle": "The ones that trip you up most often" } },
+          { "gap": "spacing.md (12)" },
+          { "block": "WordsToMaster", "content": "header row + rows" }
+      ]}
+  ]}
+]
+```
+
+--------------------------------------------------------------------------------
+7. TASK 1 — DOCK: components/glass-tabs/glass-tab-bar.tsx
+--------------------------------------------------------------------------------
+Read the whole current file first. It exports `GlassTabBar`, `GlassTabButton`,
+and (via the barrel `components/glass-tabs/index.ts`) `useMinimizeOnScroll`,
+`useTabBarMinimized`, `TabBarMinimizeProvider`, `MINIMIZE_SPRING`,
+`renderFadingTabScreen`. Keep every export name; only change what is below.
+
+Current shape (for reference, so you know exactly what you're replacing):
+- Two states, "expanded" (76×64-ish per item, icon + 9.5pt label) and
+  "minimized" (48×48 circle, label faded), interpolated by a shared
+  `progress` value from `useMinimizeState()`.
+- A `GestureDetector` with a `Pan` (scrub) raced against a `Tap`.
+- `barContent` renders a sliding highlight `Animated.View` plus the row of
+  `children` (the `GlassTabButton`s) inside a `BarContext.Provider`.
+- Wrapped in `GlassView` (or a plain `View` fallback when liquid glass is
+  unavailable), itself wrapped in a bottom-anchored `Animated.View` with a
+  `ProgressiveBlur direction="bottom"` sibling behind it.
+
+TARGET SHAPE — CH-08, icon-only, fixed size, no minimize:
+- Tray is a fixed 176×64 stadium (`radius.full`, `borderCurve: 'continuous'`),
+  centered horizontally. It no longer changes size with scroll — remove the
+  `progress`-driven `barStyle` interpolation for width/height (or clamp both
+  interpolation outputs to the same expanded value so nothing shrinks; the
+  clean approach is to delete the interpolation and hardcode 176×64 via
+  `ITEM_WIDTH = 56` per slot with `padding/gap = spacing.sm (8)` and
+  `tabCount` slots — 3 tabs × 56 + 2×8 padding = 176).
+- Each tab is a 48×48 circle. Remove the label block entirely: no
+  `Animated.Text` for `item.label`. Instead set
+  `accessibilityLabel={item.label}` on the tab's `Pressable`/trigger so the
+  visible label becomes a screen-reader-only string.
+- Selected tab: a solid disc filling the 48 circle, `backgroundColor:
+  colors.tabHighlight`, glyph drawn at `colors.onTabHighlight`, size 20.
+  Unselected tab: no fill, a hairline ring `borderWidth:
+  StyleSheet.hairlineWidth, borderColor: colors.outline`, glyph at
+  `colors.onAtmosphereMuted`, size 20. The selected disc still SLIDES between
+  positions using the existing `slideIndex` shared value and `SLIDE_SPRING`
+  (`springs.settle`) — keep that animation, just resize what it moves.
+- Bottom offset: `Math.max(insets.bottom - spacing.lg, spacing.md)` (this
+  matches the existing `Math.max(insets.bottom - 16, 12)` — same formula,
+  now expressed via `spacing.lg`/`spacing.md` tokens instead of raw 16/12
+  since 16 === spacing.lg and 12 === spacing.md already).
+- Remove the `ProgressiveBlur direction="bottom"` sibling behind the dock
+  (design rule: bottom chrome floats with no progressive-blur band). Do not
+  touch the TOP status-bar blur — that lives in `app/(tabs)/_layout.tsx`,
+  which you are not editing.
+- Scrub gesture: keep the `Gesture.Pan` / `Gesture.Tap` race, haptics, and
+  release-to-navigate behavior. Update `indexAtX` so it divides by the new
+  fixed 56pt-per-slot pitch instead of the old interpolated `itemWidth`
+  (`ITEM_WIDTH_EXPANDED`/`ITEM_WIDTH_MINIMIZED` both go away — replace with
+  one constant, e.g. `const SLOT_WIDTH = 56;`).
+- Delete every reference to `HIGHLIGHT_EXPANDED`, `HIGHLIGHT_MINIMIZED`,
+  `EXPANDED_HEIGHT`, `MINIMIZED_HEIGHT`, `ITEM_WIDTH_EXPANDED`,
+  `ITEM_WIDTH_MINIMIZED`, `LABEL_HEIGHT`, `ITEM_GAP`, `LABEL_BLOCK` if they
+  become unused after this change — re-grep the file after editing to confirm
+  nothing else references them before deleting a constant.
+- `GlassTabButton`'s internal `labelStyle`/`Animated.Text` block is removed.
+  Its icon-tint crossfade logic (`TabGlyph`, selected/unselected color
+  interpolation) can stay if it still compiles against the new fixed sizes;
+  simplify to a plain selected/unselected branch if the crossfade machinery
+  depended on the now-removed `progress` minimize value.
+- `type GlassTabItem = { name, label, icon }` stays the same shape — `label`
+  is still required, it's just no longer rendered as visible text.
+
+ACCEPTANCE for this task: the bar always renders as one fixed-size 176×64
+tray with three 48pt icon circles, never grows/shrinks on scroll, the
+selected disc still slides with a spring, scrubbing with a finger still
+switches tabs on release, and no visible label text exists anywhere in the
+component tree it renders.
+
+--------------------------------------------------------------------------------
+8. TASK 2 — HEADER: components/header-actions.tsx
+--------------------------------------------------------------------------------
+Read the whole current file first (86 lines). It exports
+`HeaderActions({ streak }: { streak: number })`, rendering a `GlassContainer`
+with two `Pressable`s: a streak/Pro capsule and a settings circle, both
+wrapped in `GlassSurface radius="full" tint="strong" interactive`.
+
+Keep: the export signature, `useSubscription()` usage, the route logic
+(`/manage-subscription` if `access.isPro` else `/paywall`, settings →
+`/settings`), `proButtonLabel()` and its three exact strings ("Checking your
+subscription", "Manage Clarity Pro", "Get Clarity Pro"), the
+`accessibilityHint={`Current streak: ${streak}`}`, `disabled={isLoading}`
+with no visual dimming, and the flame-vs-crown icon swap.
+
+Change only sizing to hit the 48pt module:
+- Streak capsule: height 48 (was implicit from padding — make it explicit
+  `height: 48`), `paddingLeft: spacing.md` (12), `paddingRight: spacing.lg`
+  (16), icon size 20 (was 24), `gap: spacing.xs` (4) between icon and number
+  (was `spacing.xs` already — keep), streak number in `variant="callout"
+  weight="medium"` with `style={{ fontVariant: ['tabular-nums'] }}` added (it
+  is a number; give it tabular figures like every other numeral in the app).
+- Settings circle: `width: 48, height: 48`, icon size 20 (was 24).
+- `GlassContainer spacing={spacing.sm}` stays (8pt gap between the two
+  pieces so they can visually merge — unchanged).
+- Do not add a title, a SpeechMark, or any new element here — Home places
+  SpeechMark itself, outside this component.
+
+ACCEPTANCE: same props, same three routes/strings, both controls exactly 48
+tall, streak capsule glyph and settings glyph both 20.
+
+--------------------------------------------------------------------------------
+9. TASK 3 — NEW: components/home/goal-row.tsx
+--------------------------------------------------------------------------------
+Create the directory `components/home/` if it does not exist.
+
+```json
+{
+  "export": "GoalRow",
+  "props": {
+    "minutesToday": "number — round(minutesOnDay(records, now)) from the caller",
+    "goalMinutes": "number — from useSettings().goalMinutes",
+    "todayProgress": "number 0..1",
+    "onStart": "() => void"
+  }
+}
+```
+
+This replaces `components/daily-goal-card.tsx` (do NOT import that file; read
+it once for behavioral reference — the ring-sweep animation approach — then
+write fresh). Renders on the plain canvas, no `GlassSurface`, no
+`AtmosphereSurface` card wrapper. Three stacked blocks, full column width
+(the parent screen already applies `spacing.xl` side padding):
+
+BLOCK 1 — today's numeral + gauge, one row:
+- Left: `ThemedText variant="eyebrow" tone="secondary"` reading `"TODAY"`.
+  Below it (small gap, e.g. `spacing.xs`), a row with:
+  `<ScoreValue value={minutesToday} size="large" unit="min" />` (import
+  `ScoreValue` from `@/components/metrics`) directly followed by
+  `spacing.lg` (16) of gap, then a small stacked pair:
+  `ThemedText variant="footnote" tone="secondary"` = `"Daily speaking goal"`
+  over `ThemedText variant="subhead" weight="regular" tone="primary"` =
+  `` `${goalMinutes} min` ``.
+- Right, right-aligned to the row's far edge: a 96×48 slot containing a
+  semicircle/arc gauge (build with `react-native-svg`, a stroke arc similar
+  in spirit to the existing `GoalRing` in `components/daily-goal-card.tsx` —
+  read that component for the exact SVG technique, since this repo has no
+  Skia) with the percent centered on the chord using
+  `<ScoreValue value={Math.round(todayProgress * 100)} size="row" unit="%" />`.
+  At `minutesToday === 0`, this still renders "0 min" and "0%" — never hide
+  the row.
+- Strings used: only `"TODAY"`, `"Daily speaking goal"`, and the unit `"min"`
+  / `"%"` already present in `ScoreValue`'s unit-formatting convention (unit
+  strings that don't start with `/` get a leading space — this is already
+  how `ScoreValue` works, do not reimplement it).
+
+BLOCK 2 — split progress bar (CO-07), gap `spacing.xxl` (24) above it
+(the 24 gap includes room for a small 12×8 triangle marker centered above
+the gap between the two segments — draw it with `react-native-svg`
+`<Path>` or a simple rotated square, filled `colors.foreground`):
+- Two segments in a row, each `height: 48`, `radius: sm (12)`,
+  `borderCurve: 'continuous'`, separated by a `spacing.xl` (20) gap.
+- `done = Math.round(todayProgress * goalMinutes)`, `left = goalMinutes - done`.
+- Segment widths are proportional to `done`/`left` (flex values, e.g.
+  `flex: done || 0.0001` and `flex: left || 0.0001` so a zero side still
+  renders a sliver — read the existing `DailyGoalCard`/segmented-bar pattern
+  if one exists, otherwise just use `Animated.View` with an animated `flex`
+  or animated `width` percentage).
+- If `todayProgress <= 0`: render exactly ONE segment (the "remaining" one)
+  spanning the full width, no marker triangle. If `todayProgress >= 1`:
+  render exactly ONE segment (the "done" one), no marker.
+- Each segment's text sits inset `spacing.xl` (20) from its own RIGHT edge:
+  `` `${done} min` `` in the done segment, `` `${left} min` `` in the
+  remaining one, both `variant="subhead" weight="regular" tone="primary"`.
+  Each segment also has a small radio-style dot inset `spacing.md` (12) from
+  its LEFT edge (a plain circle View, ~6-8pt, filled `colors.accent` in the
+  done segment and `colors.track` in the remaining one — this is a decorative
+  marker, not a control).
+- Done segment styling: `borderWidth: 2, borderColor: colors.accent` (an
+  "accent rim"), background `colors.fillTranslucent`. Remaining segment:
+  no border, background `colors.fillTranslucent` at a lower opacity (or just
+  reuse `colors.fillTranslucent` for both — the important distinction is the
+  accent rim on "done").
+- Animate the width/flex change with `withTiming(..., { duration: 900 })`
+  (comment in code: this 900ms matches the daily-goal sweep the previous
+  `DailyGoalCard` used — not a `constants/motion.ts` token, a one-off pulled
+  from the design contract). If `useAtmospherePrefs().reduced` is true, set
+  the value immediately with no animation.
+- No caption row below the bar (no "You've done X, Y left" sentence exists
+  in the current copy — do not invent one).
+
+BLOCK 3 — CH-10 "Start Practicing" capsule, gap `spacing.md` (12) above it:
+- Full width, `height: 64`, `radius: full`, background `colors.ctaTrack`.
+- Label "Start Practicing" LEFT-aligned, inset `spacing.xxl` (24) from the
+  left edge, `variant="headline" weight="medium"`, color `colors.ctaLabel`
+  (set via the `style` prop's `color`, since `ctaLabel` has no matching
+  `ThemedText` tone — this mirrors how `components/ui/primary-button.tsx`
+  already renders its knob label; you may read that file for the exact
+  pattern but you are NOT allowed to import or modify
+  `components/ui/primary-button.tsx` itself — build this capsule as a plain
+  `Pressable` in this new file).
+- Right end: a 48×48 circle, filled `colors.accent`, containing
+  `<HugeiconsIcon icon={Mic02Icon} size={20} color={colors.onAccent} />`,
+  inset `spacing.sm` (8) from the capsule's right edge (concentric with the
+  64-tall capsule: (64 - 48) / 2 = 8, which is exactly `spacing.sm` — this
+  is not a coincidence, keep it exact).
+- The WHOLE capsule (not just the circle) is the press target: wrap the
+  entire row in one `Pressable` calling `onStart`. On press: 
+  `Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)`, then `onStart()`.
+  Apply `transform: [{ scale: atmosphere.pressScale }]` while pressed (via
+  `Animated`/`useSharedValue` + `withSpring`, following the same pattern
+  `components/passage-carousel.tsx` uses for its card press-scale — read
+  that file's `pressed` shared-value handling for the exact technique, but do
+  not import from it).
+
+ACCEPTANCE: `GoalRow` exports exactly the props above, renders with no
+enclosing card/surface, all three blocks present, zero LED digits, zero new
+strings beyond `"TODAY"` / `"Daily speaking goal"` / `"Start Practicing"`
+(all of which already exist verbatim in `components/daily-goal-card.tsx` —
+confirm by reading it) plus formatted numbers.
+
+--------------------------------------------------------------------------------
+10. TASK 4 — REWRITE: components/weekly-progress.tsx
+--------------------------------------------------------------------------------
+Read the current file (72 lines) fully first — shown in section 12 below for
+your convenience, but always trust the live file on disk over this brief.
+
+Keep the exact export signature:
+`WeeklyProgress({ now, todayProgress, history }: WeeklyProgressProps)` with
+the same `WeeklyProgressProps` type (`now: number`, `todayProgress: number`,
+`history: readonly boolean[]`, 5 entries oldest-first).
+
+Replace the circular `DayChip` row with a row of seven rectangular tiles
+(CO-06). Do NOT edit `components/ui/day-chip.tsx` in this task — see the
+optional cleanup note in section 13.
+
+- Header row (unchanged content, restyle only): `"This week"` —
+  `variant="footnote" weight="regular" tone="primary"` — left, and
+  `` `${Math.round(todayProgress * 100)}% today` `` —
+  `variant="footnote" weight="regular" tone="secondary"` — right, one
+  baseline (`flexDirection: 'row', justifyContent: 'space-between',
+  alignItems: 'baseline'`). Gap `spacing.md` (12) below the header before
+  the tile row.
+- Seven tiles in a row, `flex: 1` each (so they fill the available width
+  evenly), `height: 64`, `gap: spacing.sm` (8) between tiles,
+  `borderRadius: radius.sm` (12), `borderCurve: 'continuous'`.
+- Each tile: the day LETTER sits `spacing.sm` (8) below the tile's top edge,
+  centered, `variant="footnote" weight="medium"` (reuse whatever weight the
+  current `DayChip` letter used — check the file), ink for past/today, muted
+  for tomorrow. A 24×24 badge sits centered, its bottom `spacing.sm` (8)
+  above the tile's bottom edge.
+- Badge states:
+  - Past, met (`history[i] === true`): tile background
+    `colors.fillTranslucent` + hairline `colors.outline`; badge is a filled
+    24 circle, `colors.positive`, with a small check-tick glyph (glob per
+    section 5) at size 12, colored to contrast the fill (use
+    `colors.inverseLabel` or similar existing "ink on a filled dot" token —
+    check what color the OLD filled-DayChip check used and match it, since
+    that value already exists as a token).
+  - Past, not met: same tile background, badge is a hollow 24 circle with a
+    1pt `colors.track` ring, no glyph inside.
+  - Today: tile gets an ink rim — `borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.foreground` (or whatever token the design contract
+    calls "ink rim" — use `colors.foreground`) instead of the muted outline.
+    Badge is the 24 circle with an SVG progress arc for `todayProgress`
+    (stroke width 2, same arc-drawing technique as any existing progress
+    ring in this repo — `react-native-svg` `<Circle>` with
+    `strokeDasharray`/`strokeDashoffset`).
+  - Tomorrow: tile has NO badge at all (leave the badge slot empty — a
+    32×24-ish gap is fine, just don't render a badge), letter is muted, tile
+    fill can be the plain canvas (no `fillTranslucent`) with only a hairline
+    `colors.outline` border, OR fully borderless — match whatever reads as
+    "the least emphasized state" using only existing tokens.
+- Do NOT render a day-of-month numeral anywhere in this component (the old
+  `DayChip` never did either — just confirming you don't add one).
+- Not tappable. No `Pressable`, no `accessibilityRole="button"`.
+- Letters and today/tomorrow indices: keep the EXACT same date math the
+  current file uses (`DAY_LETTERS`, the loop building 5 past + today +
+  tomorrow from `now`). Do not change how dates are computed, only how each
+  day is painted.
+
+ACCEPTANCE: same props/signature, seven flex rectangles (not circles) in a
+row, header row unchanged in content, no numerals inside any badge, today
+visually distinct via an ink rim + progress arc, tomorrow visually distinct
+via no badge.
+
+--------------------------------------------------------------------------------
+11. TASK 5 — NEW: components/home/passage-rail.tsx
+--------------------------------------------------------------------------------
+Read `components/passage-carousel.tsx` fully first for reference (you are
+NOT editing or importing it — Practice still uses it as-is). Read
+`constants/passages.ts` for the `Passage` shape and `PASSAGES` data. Read
+`components/ui/atmosphere-surface.tsx` for `AtmosphereSurface` (mesh
+`"artwork"` takes an `artwork: Passage['artwork']` prop). Read
+`components/ui/speech-mark.tsx` for `SpeechMark`. Read `lib/score.ts` for
+`speakingScore`. Read `lib/stats.ts` for the `SkillProfile` type returned by
+`skillProfile()`. Read `constants/metrics.ts` for `SKILL_LABELS`.
+
+```json
+{
+  "export": "PassageRail",
+  "props": {
+    "items": "readonly Passage[] (from @/types/session)",
+    "records": "readonly SessionRecord[] (from @/types/history, whatever the current file imports it as)",
+    "skillProfile": "SkillProfile (return type of skillProfile() in @/lib/stats)",
+    "onStart": "(item: Passage) => void"
+  }
+}
+```
+
+Layout: a horizontal `ScrollView` (`horizontal`, `showsHorizontalScrollIndicator={false}`,
+`snapToInterval={279}` — 271 card + spacing.sm 8 gap, `decelerationRate="fast"`).
+First card's left edge sits flush with the parent's content edge (the parent
+already applies `spacing.xl` padding — do not add extra left padding here
+beyond what makes the gap between cards consistent). Cards are `spacing.sm`
+(8) apart. NO scale transform on off-center cards, NO blur, NO pager dots
+(this is a deliberate simplification vs the old 2-up-with-peek carousel —
+one full card at a time, with the next card's edge visible as the "peek").
+Apply `marginRight: -spacing.md` on the scroll content's container (or an
+equivalent bleed technique) only if needed so the peek can reach into the
+sheet's edge — verify visually/logically against the parent's padding, this
+is a minor layout-fit detail, not a hard geometry requirement.
+
+Each card: 271×271, `<AtmosphereSurface mesh="artwork" artwork={item.artwork}
+radius="xl">` with `padding: spacing.xl` (20) inside. Interior (local
+coordinates from the card's own padded edge):
+
+- Top-left: a 48×48 circle, hairline border `colors.onArtwork` at reduced
+  opacity (e.g. wrap in `{ borderColor: colors.onArtwork, opacity: 0.45 }`
+  applied to the border only, not the child), containing
+  `<SpeechMark color={colors.onArtwork} height={20} />` centered.
+  Around this circle, draw an SVG progress arc (stroke 2, `colors.onArtwork`)
+  representing the BEST score for this passage: compute
+  `bestScoreFor(item.id) = speakingScore(records.filter(r => r.passageId === item.id))`
+  — if no record exists for this id, or the computed score is null, draw NO
+  arc (just the plain hairline track).
+- To the right of that disc (gap ~`spacing.md` 12), a title block, width
+  constrained so it stops before the top-right action disc: `item.title` in
+  `variant="title3" weight="regular" tone="onArtwork"`, max 2 lines, tail
+  ellipsis (`numberOfLines={2}`). Directly under it: `"Speak"` —
+  `variant="footnote" weight="regular" tone="onArtworkMuted"`, one line. Do
+  NOT render the word "Start" anywhere on this card.
+- Top-right: a 48×48 circle, filled `colors.inverseSurface`, containing
+  `<HugeiconsIcon icon={PlayIcon} size={20} color={colors.inverseLabel} />`.
+  This disc is purely decorative — it is NOT its own `Pressable`; the whole
+  card below handles the tap.
+- Gap `spacing.xxl` (24) below the header row. Left: `"Reading pace"` —
+  `variant="footnote" tone="onArtworkMuted"` — above
+  `<ScoreValue value={item.targetWpm} size="large" on="mesh" unit="wpm" />`.
+  If a best score exists for this item (see above), right-aligned at the
+  same vertical band: `"Best score"` (`footnote` `onArtworkMuted`) over
+  `` `${Math.round(bestScore)} /100` `` (`subhead` `onArtwork`), its
+  BASELINE aligned with the wpm numeral's baseline (use
+  `alignItems: 'baseline'` on the row containing both stacks). If there is
+  no best score, omit this right-hand pair entirely (don't render an empty
+  slot).
+- A single row of up to 20 small (4pt) dots representing
+  `skillProfile[item.skills[0]]` — only render this row if
+  `skillProfile[item.skills[0]].samples > 0`; otherwise omit the row
+  entirely. Lit-dot count = `Math.min(20, Math.max(0, Math.round(skillProfile[item.skills[0]].value / 100 * 20)))`.
+  Lit dots `colors.onArtwork`, unlit dots `colors.onArtworkMuted` (or a
+  faded opacity of the same).
+- Footer row, bottom of the card: `item.duration` left
+  (`variant="footnote" tone="onArtworkMuted"`), and the passage's skill
+  labels joined with `" · "` right (`variant="subhead" tone="onArtwork"`,
+  mapping each `item.skills[i]` through `SKILL_LABELS`), both on one
+  baseline.
+
+Interaction: the ENTIRE card is one `Pressable` calling `onStart(item)`.
+`Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)` on press. Scale
+`atmosphere.pressScale` while pressed (same technique as `GoalRow`'s
+capsule — reuse your own local press-scale helper or copy the pattern, do
+not import a shared one that doesn't exist).
+
+ACCEPTANCE: `PassageRail` exports exactly the props above. No `Start` text
+anywhere. Ring arc only appears when a real best score exists. Right-hand
+"Best score" pair only appears when a real best score exists. Skill-dot row
+only appears when `samples > 0`. `components/passage-carousel.tsx` is
+byte-for-byte untouched.
+
+--------------------------------------------------------------------------------
+12. TASK 6 — NEW: components/home/progress-rail.tsx
+--------------------------------------------------------------------------------
+Read `components/progress-card.tsx` fully first for reference (behavioral
+reference only — you will delete this file later, once nothing imports it;
+do not import it from your new file). Read `components/empty-state-card.tsx`
+for the visual language of an empty state, but do NOT import or render
+`EmptyStateCard` itself from this new component — Analytics still uses that
+component for its own empty state and this brief wants the Home empty state
+built inline per the design contract's wording ("renders the empty block
+itself... does not use EmptyStateCard").
+
+```json
+{
+  "export": "ProgressRail",
+  "props": {
+    "hasRecords": "boolean",
+    "score": "number | null",
+    "scoreDelta": "number | null",
+    "totalMinutes": "number",
+    "totalSessions": "number",
+    "longestStreak": "number",
+    "onOpenAnalytics": "() => void"
+  }
+}
+```
+
+WHEN `hasRecords === false`: render a centered block, no glass/card
+background. A 52×52 circle with a hairline `colors.track` border, containing
+`<HugeiconsIcon icon={AnalyticsUpIcon} size={24} .../>` centered (color:
+`colors.secondary` or `colors.foreground`, pick whichever the old
+`EmptyStateCard` used — check that file). Below it: title `"No progress
+yet"` (`variant="title3" tone="primary"`), then the EXACT existing subtitle
+sentence `"Finish your first practice session and your 7-day score,
+minutes, sessions, and best streak will show up here."`
+(`variant="footnote" tone="secondary"`, `style={{ maxWidth: 260 }},
+textAlign: 'center'`). No tiles, no invented zero values. Not a `Pressable`.
+
+WHEN `hasRecords === true`: a horizontal snap `ScrollView`, same rail
+mechanics as `PassageRail` (271×271 tiles, `spacing.sm` gap, `snapToInterval`
+279, no dots/scale/blur), exactly FOUR tiles, in this fixed order:
+
+Shared tile frame (all four tiles): `<AtmosphereSurface radius="xl"
+padding={spacing.xl}>`. Identity disc top-left, 48×48, hairline outline (no
+fill, no badge). Action disc top-right, 48×48, filled `colors.fillTranslucent`,
+containing an arrow-up-right glyph (glob per section 5), size 20, decorative.
+Title starts at `disc bottom + spacing.xxl (24)`, `variant="title3"
+weight="regular"`, one line. Below the title, a flexible void (`flex: 1`,
+minimum `spacing.xxl` 24) before the value band at the tile's bottom. The
+WHOLE tile is one `Pressable` calling `onOpenAnalytics()` — same press-scale
++ haptic treatment as the other cards in this pass. The action disc is
+decorative, not its own target.
+
+Tile 1 — mesh `"hero"`, tones `onAtmosphere`/`onAtmosphereMuted`. Identity
+icon: reuse `Chart02Icon` or glob a chart-style icon if that name doesn't
+fit visually (check what `app/(tabs)/analytics.tsx` currently uses for its
+own chart icon and mirror it, without importing that screen). Title
+"Speaking score". Value band is a compact hero cluster:
+  - A delta row, `minHeight: spacing.xl (20)`: if `scoreDelta` is null or 0,
+    render an EMPTY row that still holds the 20pt height (don't collapse
+    it — this keeps every tile's title-to-value gap identical). Otherwise
+    render an up/down arrow (reuse the arrow-drawing approach from
+    `components/metrics/delta-label.tsx` — read it for the exact SVG path,
+    but build your own tiny local arrow in this file rather than importing
+    that component, since it renders raw `Text` not `ThemedText`) plus
+    `Math.abs(scoreDelta)` in `variant="callout" weight="regular"`, colored
+    `colors.positive` when `scoreDelta > 0` else `colors.onAtmosphereMuted`,
+    followed by `" this week"` always in the muted tone.
+  - `<ScoreValue value={score} size="large" on="mesh" unit="/100" />`.
+  - Caption, on the numeral's baseline: if `score != null`, the band word
+    from `scoreBand(score)` (import from `@/lib/score`) IN ITS SOURCE CASE
+    (e.g. "Strong" — do not `.toUpperCase()` it), `variant="footnote"
+    tone="onAtmosphereMuted"`, then `"Last 7 days"` also `footnote` muted.
+    If `score == null`, caption is `"Last 7 days"` alone (ScoreValue already
+    renders its own "–" dash for a null value — do not add another dash).
+
+Tiles 2–4 — meshes `"minutes"`, `"sessions"`, `"streak"` respectively (these
+mesh family names already exist in `AtmosphereSurface`/`constants/colors.ts`
+— confirm by reading `components/ui/atmosphere-surface.tsx`). Value band is
+a plain `<ScoreValue size="large" on="mesh" .../>`, no delta row, no status
+slot:
+  - Tile 2: identity = clock icon (glob), title `"practice"`, value =
+    `totalMinutes >= 60 ? Math.round(totalMinutes / 60) : Math.round(totalMinutes)`,
+    unit = `totalMinutes >= 60 ? "h" : "min"`.
+  - Tile 3: identity = mic icon (`Mic02Icon` if it reads correctly here,
+    otherwise glob), title = `totalSessions === 1 ? "session" : "sessions"`,
+    value = `totalSessions`, unit = `""` (no unit — `ScoreValue` renders the
+    bare number when `unit=""`).
+  - Tile 4: identity = `FireIcon`, title = `"best streak"`, value =
+    `longestStreak`, unit = `longestStreak === 1 ? "day" : "days"`.
+
+ACCEPTANCE: `ProgressRail` exports exactly the props above. Empty state
+renders with no `EmptyStateCard` import. Filled state is a 4-tile rail, tile
+1 uses `ScoreValue size="large"` (NOT `hero`) with a delta row and band
+caption, tiles 2–4 are plain value+unit with no delta. No `MetricCapsule`
+import anywhere in this file.
+
+--------------------------------------------------------------------------------
+13. TASK 7 — REWRITE: components/words-to-master.tsx
+--------------------------------------------------------------------------------
+Current file (167 lines) for your reference — always re-read the live file,
+this is a snapshot:
+
+```
+import { PlayIcon, VolumeHighIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import * as Haptics from 'expo-haptics';
+import { Fragment } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+
+import { GlassSurface, PrimaryButton, ThemedText } from '@/components/ui';
+import { radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+
+const ROW_INSET = spacing.xl;
+const SPEAKER_SIZE = 36;
+
+export type WordToMaster = { word: string; count: number };
+
+export type WordsToMasterProps = {
+  words: readonly WordToMaster[];
+  onPracticeAll: () => void;
+  generating?: boolean;
+  onSpeak?: (word: string) => void;
+  speakingWord?: string | null;
+};
+
+export function WordsToMaster({
+  words, onPracticeAll, generating = false, onSpeak, speakingWord,
+}: WordsToMasterProps) {
+  const { colors } = useTheme();
+  const handlePracticeAll = () => { onPracticeAll(); };
+  const handleSpeak = (word: string) => {
+    Haptics.selectionAsync();
+    onSpeak?.(word);
+  };
+  return (
+    <View style={styles.card}>
+      <GlassSurface radius="lg" tint="strong" style={StyleSheet.absoluteFill} />
+      <View style={styles.header}>
+        <ThemedText variant="subhead" weight="regular" tone="secondary" style={styles.summary}>
+          <ThemedText variant="subhead" weight="semibold" tone="primary">{words.length}</ThemedText>
+          {words.length === 1 ? ' word needs work' : ' words need work'}
+        </ThemedText>
+        <PrimaryButton
+          title={generating ? 'Creating passage' : 'Practice all'}
+          icon={generating ? undefined : PlayIcon}
+          variant="solid" size="md" disabled={generating}
+          onPress={handlePracticeAll} style={styles.practiceAll}
+        />
+      </View>
+      {words.map((item, i) => (
+        <Fragment key={item.word}>
+          {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
+          <View style={styles.row}>
+            <View style={styles.wordGroup}>
+              <ThemedText variant="title3" weight="regular" tone="primary" style={styles.word} numberOfLines={1}>
+                {item.word}
+              </ThemedText>
+              <ThemedText variant="footnote" tone="tertiary">{item.count}×</ThemedText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Hear ${item.word}`}
+              accessibilityState={{ busy: speakingWord === item.word }}
+              disabled={speakingWord === item.word}
+              onPress={() => handleSpeak(item.word)}
+              hitSlop={spacing.sm}
+              style={({ pressed }) => [
+                styles.speaker,
+                { backgroundColor: colors.fillTranslucent, borderColor: colors.frostRim },
+                pressed && styles.pressedStrong,
+              ]}>
+              {speakingWord === item.word ? (
+                <ActivityIndicator size="small" color={colors.foreground} />
+              ) : (
+                <HugeiconsIcon icon={VolumeHighIcon} size={19} color={colors.foreground} />
+              )}
+            </Pressable>
+          </View>
+        </Fragment>
+      ))}
+    </View>
+  );
+}
+```
+(styles omitted here — read the live file for the full `StyleSheet.create`
+block before you replace it.)
+
+TARGET CHANGES — keep the exact same export, `WordToMaster` type, and
+`WordsToMasterProps` type:
+- REMOVE the `<GlassSurface radius="lg" tint="strong" .../>` background and
+  the `styles.card` padding that implied a card. This component is now the
+  bare list body — `app/(tabs)/index.tsx` renders a `SectionHeader` above it
+  directly on the sheet background, with no separate frost card.
+- REMOVE the `PrimaryButton` import/usage for "Practice all". Build it
+  in-place instead: a solid capsule, `height: 48`, `radius: full`, filled
+  `colors.inverseSurface`, label `` `${generating ? 'Creating passage' :
+  'Practice all'}` `` in `variant="headline" weight="medium"` colored
+  `colors.inverse` (check `constants/colors.ts` for the exact "ink on
+  inverseSurface" token name — it may be `inverse` or `inverseLabel`,
+  confirm by reading the file), plus the `PlayIcon` at size 20 colored the
+  same ink token (hidden/replaced by a spinner while `generating`). Keep the
+  `disabled={generating}` behavior and the exact two label strings.
+- Header row height 48 total, `justifyContent: 'space-between',
+  alignItems: 'center'`, gap `spacing.md` (12) before the first row below it.
+  Keep the exact existing count/pluralization text and structure
+  (`{words.length}` bold-ish span + `" word needs work"` /
+  `" words need work"`).
+- Each row: `minHeight: 72` (was implicit, make it explicit). Word text
+  becomes `variant="title3" weight="regular" tone="primary"`, one line, tail
+  ellipsis (was `title3` already — keep the variant, this is mostly
+  unchanged). No caption line added. Count + "×" stay `footnote`, muted,
+  baseline-aligned with the word (`alignItems: 'baseline'`), gap
+  `spacing.md` (12) before the speaker disc.
+- Speaker becomes a 48×48 circle (was 36pt), filled `colors.fillTranslucent`
+  (drop the separate `frostRim` border — a flat tinted circle, matching the
+  47pt discs used elsewhere in this pass), glyph size 20 (was 19 — round up
+  to the standard 20). Keep `VolumeHighIcon`, the busy spinner via
+  `ActivityIndicator`, `accessibilityState={{ busy }}`, and the exact
+  `` `Hear ${item.word}` `` accessibility label.
+- Keep the hairline divider between rows (`colors.divider`), but it can now
+  be a hairline `colors.outline` under each row except the last, inset from
+  the left edge — either approach is fine as long as rows read as a list,
+  not as a single undivided block.
+- Keep `handleSpeak`'s `Haptics.selectionAsync()` call before `onSpeak?.()`.
+
+ACCEPTANCE: same exported types/props, no `GlassSurface`/card background, no
+`PrimaryButton` import, "Practice all" and the speaker disc both exactly
+48pt, header row height 48, rows `minHeight` 72, all existing strings and
+accessibility labels intact.
+
+--------------------------------------------------------------------------------
+14. TASK 8 — REWRITE: app/(tabs)/index.tsx
+--------------------------------------------------------------------------------
+Current file (226 lines) — READ THE LIVE FILE, this is a snapshot for
+orientation only:
+
+```
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { Alert, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AnalyticsUpIcon } from '@hugeicons/core-free-icons';
+import { useMemo, useState } from 'react';
+
+import { DailyGoalCard } from '@/components/daily-goal-card';
+import { EmptyStateCard } from '@/components/empty-state-card';
+import { useMinimizeOnScroll } from '@/components/glass-tabs';
+import { HeaderActions } from '@/components/header-actions';
+import { PassageCarousel } from '@/components/passage-carousel';
+import { ProgressCard } from '@/components/progress-card';
+import { IntroReveal } from '@/components/splash';
+import { WeeklyProgress } from '@/components/weekly-progress';
+import { AtmosphereCanvas, SectionHeader, ThemedText } from '@/components/ui';
+import { WordsToMaster } from '@/components/words-to-master';
+import { PASSAGES } from '@/constants/passages';
+import { spacing, TAB_BAR_SCROLL_INSET } from '@/constants/theme';
+import { useMarkInteractive } from '@/hooks/use-mark-interactive';
+import { useSessionRecords, useDerivedStats, useWords } from '@/hooks/use-session-history';
+import { useNow } from '@/hooks/use-now';
+import { useSpeakingSummary } from '@/hooks/use-speaking-summary';
+import { totals } from '@/lib/stats';
+import { generateWordPracticePassage } from '@/services/practice-generation';
+import { speakWord } from '@/services/word-pronunciation';
+
+function greeting(now: number) {
+  const hour = new Date(now).getHours();
+  if (hour < 5) return 'Good Evening';
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+export default function HomeScreen() {
+  useMarkInteractive();
+  const onScroll = useMinimizeOnScroll();
+  const insets = useSafeAreaInsets();
+  const now = useNow();
+  const stats = useDerivedStats();
+  const records = useSessionRecords();
+  const summary = useSpeakingSummary();
+  const percent = Math.round(stats.todayProgress * 100);
+  const startPractice = () => router.push('/practice');
+  const greet = greeting(now);
+  const splitAt = greet.indexOf(' ');
+  const lead = splitAt === -1 ? greet : greet.slice(0, splitAt);
+  const tail = splitAt === -1 ? '' : greet.slice(splitAt + 1);
+
+  const progress = useMemo(() => {
+    if (records.length === 0) return null;
+    const t = totals(records);
+    return {
+      totalMinutes: Math.round(t.minutes),
+      totalSessions: t.sessions,
+      longestStreak: t.longestStreak,
+    };
+  }, [records]);
+
+  const { toMaster } = useWords(5);
+  const [generatingPractice, setGeneratingPractice] = useState(false);
+  const [speakingWord, setSpeakingWord] = useState<string | null>(null);
+
+  const handlePracticeAll = async () => {
+    if (generatingPractice) return;
+    setGeneratingPractice(true);
+    try {
+      const passage = await generateWordPracticePassage(toMaster.map((w) => w.word));
+      router.push(`/session/${passage.id}`);
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Passage not created',
+        error instanceof Error ? error.message : 'Passage generation is unavailable right now.');
+    } finally {
+      setGeneratingPractice(false);
+    }
+  };
+
+  const handleSpeak = async (word: string) => {
+    if (speakingWord) return;
+    setSpeakingWord(word);
+    try {
+      await speakWord(word);
+    } catch (error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Pronunciation unavailable',
+        error instanceof Error ? error.message : 'Pronunciation audio is unavailable right now.');
+    } finally {
+      setSpeakingWord(null);
+    }
+  };
+
+  return (
+    <AtmosphereCanvas>
+    <Animated.ScrollView
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+      style={{ flex: 1 }}
+      contentContainerStyle={{
+        paddingTop: insets.top + spacing.sm,
+        paddingHorizontal: spacing.xl,
+        paddingBottom: TAB_BAR_SCROLL_INSET,
+      }}>
+      <IntroReveal order={0} fade={false} style={styles.chromeRow}>
+        <HeaderActions streak={stats.streak} />
+      </IntroReveal>
+      <IntroReveal order={0} style={styles.titleBlock}>
+        <ThemedText variant="display" numberOfLines={2} tone="primary">
+          <ThemedText variant="display" tone="numeralFaint">{lead}</ThemedText>
+          {'\n'}{tail}
+        </ThemedText>
+        <ThemedText variant="subhead" weight="regular" tone="secondary">
+          {percent > 0 ? (
+            <>
+              <ThemedText variant="subhead" weight="semibold" tone="primary">{`${percent}%`}</ThemedText>
+              {" of today's speaking goal"}
+            </>
+          ) : ('A short session is enough to start')}
+        </ThemedText>
+      </IntroReveal>
+      <IntroReveal order={1} style={{ marginTop: spacing.xxl }}>
+        <WeeklyProgress now={now} todayProgress={stats.todayProgress} history={stats.weeklyHistory} />
+      </IntroReveal>
+      <IntroReveal order={2} fade={false} style={{ marginTop: spacing.xl }}>
+        <DailyGoalCard percent={percent} onStartPractice={startPractice} />
+      </IntroReveal>
+      <IntroReveal order={3}>
+        <SectionHeader title="For you" subtitle="Sharpen your speaking with these passages" />
+      </IntroReveal>
+      <IntroReveal order={4} fade={false}>
+        <PassageCarousel items={PASSAGES} onStart={(item) => router.push(`/session/${item.id}`)} horizontalPadding={spacing.xl} />
+      </IntroReveal>
+      <IntroReveal order={5}>
+        <SectionHeader title="Your progress" subtitle="Where your speaking stands right now" />
+      </IntroReveal>
+      <IntroReveal order={6} fade={false} style={styles.sectionCard}>
+        {progress ? (
+          <ProgressCard {...progress} score={summary.score} scoreDelta={summary.scoreDelta ?? undefined} />
+        ) : (
+          <EmptyStateCard icon={AnalyticsUpIcon} title="No progress yet"
+            subtitle="Finish your first practice session and your 7-day score, minutes, sessions, and best streak will show up here." />
+        )}
+      </IntroReveal>
+      {toMaster.length > 0 && (
+        <>
+          <IntroReveal order={7}>
+            <SectionHeader title="Words to master" subtitle="The ones that trip you up most often" />
+          </IntroReveal>
+          <IntroReveal order={8} fade={false} style={styles.sectionCard}>
+            <WordsToMaster words={toMaster} onPracticeAll={handlePracticeAll} generating={generatingPractice}
+              onSpeak={handleSpeak} speakingWord={speakingWord} />
+          </IntroReveal>
+        </>
+      )}
+    </Animated.ScrollView>
+    </AtmosphereCanvas>
+  );
+}
+
+const styles = StyleSheet.create({
+  chromeRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  titleBlock: { marginTop: spacing.lg, gap: spacing.sm },
+  sectionCard: { marginTop: spacing.md },
+});
+```
+
+TARGET REWRITE:
+- KEEP unchanged: `useMarkInteractive()`, `greeting(now)` (rename its usage
+  slightly — see below — but the function's four branches and strings stay
+  exactly as written), all the data hooks (`useNow`, `useDerivedStats`,
+  `useSessionRecords`, `useSpeakingSummary`, `useWords(5)`), the `progress`
+  memo, `handlePracticeAll`, `handleSpeak`, and both `Alert.alert` calls
+  verbatim.
+- ADD `import { useSettings } from '@/hooks/use-settings';` and
+  `const { goalMinutes } = useSettings();` — confirm this hook's exact export
+  name by reading `hooks/use-settings.ts` first.
+- ADD `import { minutesOnDay } from '@/lib/stats';` (confirm the export in
+  `lib/stats.ts`) and compute
+  `const minutesToday = Math.round(minutesOnDay(records, now));`.
+- REMOVE the imports of `DailyGoalCard`, `ProgressCard`, `PassageCarousel`,
+  `EmptyStateCard`, `useMinimizeOnScroll` (from `@/components/glass-tabs`),
+  `TAB_BAR_SCROLL_INSET` (from `@/constants/theme`), and `AnalyticsUpIcon`
+  (no longer used directly by this file — it moves inside `ProgressRail`).
+- ADD imports: `SpeechMark` and `GlassSurface` from `@/components/ui` (check
+  the barrel `components/ui/index.ts` for the exact export path — it should
+  already list `SpeechMark`), `GoalRow` from `@/components/home/goal-row`,
+  `PassageRail` from `@/components/home/passage-rail`, `ProgressRail` from
+  `@/components/home/progress-rail`.
+- REMOVE `const onScroll = useMinimizeOnScroll();` and the
+  `onScroll={onScroll} scrollEventThrottle={16}` props on the
+  `Animated.ScrollView` (Home no longer minimizes the dock — the dock is
+  fixed-size per Task 1).
+- Define, near the top of the file:
+  `// Dock bottom offset (18) + bar height (64) + spacing.xxxl (32) — replaces TAB_BAR_SCROLL_INSET for this screen.`
+  `const HOME_DOCK_INSET = 114;`
+  Use `paddingBottom: HOME_DOCK_INSET` in `contentContainerStyle` (keep
+  `paddingTop: insets.top + spacing.sm` and `paddingHorizontal: spacing.xl`
+  exactly as they are).
+- Chrome row: replace `styles.chromeRow` (`justifyContent: 'flex-end'`) with
+  a row that is `justifyContent: 'space-between', alignItems: 'center',
+  height: 48`. Inside it, FIRST render
+  `<SpeechMark color={colors.onAtmosphere} height={20} />` wrapped so it is
+  hidden from accessibility (`accessibilityElementsHidden
+  importantForAccessibility="no-hide-descendants"` — `SpeechMark` may
+  already do this internally; check the file and don't double-wrap if so),
+  THEN `<HeaderActions streak={stats.streak} />`. You will need
+  `const { colors } = useTheme();` — add that import/hook call.
+- Greeting block: replace the `styles.titleBlock` `IntroReveal` with a
+  `marginTop: spacing.xxxxl` (48) wrapper (was `spacing.lg`). Replace its
+  contents with ONE `ThemedText variant="largeTitle" tone="primary"
+  accessibilityRole="header"` containing: the full greeting string
+  (`greet`, e.g. `"Good Morning"`, NOT split into `lead`/`tail`, and NOT
+  wrapped in a nested faint/ink span — render it as one plain line), then a
+  literal `{'\n'}`, then a NESTED `ThemedText variant="largeTitle"
+  tone="secondary"` for line 2: if `percent > 0`,
+  `` `${percent}% of today's speaking goal` `` as ONE plain string (no
+  semibold inner span on the percent — the whole second line is one muted
+  tone, per the approved contract); else `'A short session is enough to
+  start'`. Remove the `numberOfLines={2}` truncation limit entirely (the
+  approved contract says this text never truncates).
+- Remove the old `lead`/`tail`/`splitAt` variables if `greet` is now used
+  directly as one string (keep `greeting()` itself unchanged — just stop
+  splitting its return value).
+- Below the greeting, `marginTop: spacing.xxl` (24), render:
+  ```
+  <GoalRow
+    minutesToday={minutesToday}
+    goalMinutes={goalMinutes}
+    todayProgress={stats.todayProgress}
+    onStart={startPractice}
+  />
+  ```
+  Keep `const startPractice = () => router.push('/practice');` exactly as
+  it is — `GoalRow` fires its own haptic internally (per Task 3), so DO NOT
+  also fire `Haptics.impactAsync(...)` at this call site if the old code did
+  so at the button level (the current file doesn't — `startPractice` is a
+  plain navigation call already, so no change needed here beyond passing it
+  through).
+- Below `GoalRow`, `marginTop: spacing.xxxl` (32), begin the sheet. Render:
+  ```
+  <View style={{ marginHorizontal: -spacing.md }}>
+    <GlassSurface
+      radius="hero"
+      tint="strong"
+      style={[StyleSheet.absoluteFill, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }]}
+    />
+    <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.xxl }}>
+      {/* sheet content below */}
+    </View>
+  </View>
+  ```
+  (Comment above the radius override: the sheet bleeds past the scroll
+  content's end, so its bottom corners stay square.) Do NOT wrap this
+  `GlassSurface` or its sibling content `View` in an `IntroReveal` with
+  `fade={true}` — glass breaks under animated opacity. If you keep an
+  `IntroReveal` around the outer sheet `View`, it MUST use `fade={false}`
+  (matching the existing convention already used for `HeaderActions` and
+  `DailyGoalCard` in the current file).
+- Inside the sheet content `View`, in order:
+  1. `<WeeklyProgress now={now} todayProgress={stats.todayProgress} history={stats.weeklyHistory} />`
+     — no extra top margin (the sheet's own `paddingTop: spacing.xxl`
+     already provides the gap).
+  2. `marginTop: spacing.xxxl` (32), then
+     `<SectionHeader title="For you" subtitle="Sharpen your speaking with these passages" />`
+     — but check `components/ui/section-header.tsx`: it already applies its
+     OWN `marginTop: spacing.xxxl` internally. If you wrap it in an
+     additional `marginTop: spacing.xxxl` `View`, you will double the gap.
+     Read that file (section-header.tsx) and either (a) let
+     `SectionHeader`'s own margin be the ONLY gap here (no wrapper margin),
+     or (b) if you need the FIRST section header inside the sheet to have
+     zero extra top margin (since the sheet's own top padding already
+     covers it), pass a style override or accept the section header's
+     built-in `xxxxl`-ish margin and adjust the sheet's `paddingTop`
+     downward to compensate. Use your judgment to avoid a doubled or
+     missing gap — verify by reasoning through the exact pixel math before
+     finalizing, and prefer LESS wrapper-added margin over more, since
+     `SectionHeader` already owns its own top spacing.
+  3. `<PassageRail items={PASSAGES} records={records} skillProfile={stats.skillProfile} onStart={(item) => router.push(`/session/${item.id}`)} />`
+     (confirm `stats.skillProfile` exists on the `useDerivedStats()` return
+     value by reading `hooks/use-session-history.ts` — it does, per the
+     hook's current implementation).
+  4. `<SectionHeader title="Your progress" subtitle="Where your speaking stands right now" />`.
+  5. ```
+     <ProgressRail
+       hasRecords={records.length > 0}
+       score={summary.score}
+       scoreDelta={summary.scoreDelta ?? null}
+       totalMinutes={progress?.totalMinutes ?? 0}
+       totalSessions={progress?.totalSessions ?? 0}
+       longestStreak={progress?.longestStreak ?? 0}
+       onOpenAnalytics={() => router.navigate('/analytics')}
+     />
+     ```
+  6. If `toMaster.length > 0`: `marginTop: spacing.xxxl` (32),
+     `<SectionHeader title="Words to master" subtitle="The ones that trip you up most often" />`,
+     then `marginTop: spacing.md` (12),
+     `<WordsToMaster words={toMaster} onPracticeAll={handlePracticeAll} generating={generatingPractice} onSpeak={handleSpeak} speakingWord={speakingWord} />`.
+- Update the trailing `StyleSheet.create` block to remove now-unused style
+  keys (`chromeRow`'s old `justifyContent: 'flex-end'`, `titleBlock`,
+  `sectionCard`) and add whatever new keys your JSX above references.
+- `displayName` from settings is NEVER rendered on this screen (unchanged
+  rule from the current file's comment on `greeting()`).
+
+ACCEPTANCE for this task: the file compiles, imports nothing this brief told
+you to delete, renders the eight blocks in section 6's exact order, uses
+`HOME_DOCK_INSET` (114) instead of `TAB_BAR_SCROLL_INSET`, never calls
+`useMinimizeOnScroll`, and every string on screen still exists verbatim in
+either the old file (greeting variants, section titles/subtitles, empty
+state sentence) or in a component this brief specified.
+
+--------------------------------------------------------------------------------
+15. TASK 9 — CUTOVER CLEANUP (do this LAST, after everything above compiles)
+--------------------------------------------------------------------------------
+1. Run:
+   `grep -rn "DailyGoalCard" --include=*.tsx --include=*.ts .`
+   `grep -rn "ProgressCard" --include=*.tsx --include=*.ts .`
+   (or your editor's equivalent search). If the ONLY remaining references are
+   inside `components/daily-goal-card.tsx` / `components/progress-card.tsx`
+   themselves (i.e. no other file imports them anymore), DELETE both files.
+   If any other file still imports either one, DO NOT delete it — leave a
+   short code comment nowhere (just don't delete) and move on; that means
+   scope has changed since this brief was written and you should stop and
+   report it rather than guessing.
+2. Run the same check for `EmptyStateCard`
+   (`grep -rn "EmptyStateCard"`). It MUST still be used by
+   `app/(tabs)/analytics.tsx` — confirm that, and do NOT delete
+   `components/empty-state-card.tsx`.
+3. Confirm `components/ui/metric-capsule.tsx` and `components/ui/led-number.tsx`
+   are still imported by `app/(tabs)/analytics.tsx`
+   (`grep -rn "MetricCapsule"`, `grep -rn "LedNumber"`). Do NOT delete
+   either file.
+4. OPTIONAL, only if you have time and want to fully finish the cutover:
+   `grep -rn "DayChip" --include=*.tsx .` and
+   `grep -rn 'intent="goal"' --include=*.tsx .`. If, after your
+   `weekly-progress.tsx` rewrite, NOTHING in the repo passes
+   `intent="goal"` to `DayChip` anymore (only `intent="axis"` calls remain,
+   e.g. inside `components/analytics/score-chart.tsx`), you MAY remove the
+   now-dead `'goal'` branch and its associated props (`filled`, `muted`,
+   `progress`) from `components/ui/day-chip.tsx`, keeping the `'axis'`
+   branch completely untouched. If ANY other caller still uses
+   `intent="goal"`, leave `day-chip.tsx` entirely alone. This step is
+   optional — do not let it block finishing the rest of the brief.
+
+--------------------------------------------------------------------------------
+16. FINAL VERIFICATION (do this after every task above is done)
+--------------------------------------------------------------------------------
+1. Typecheck the project (check `package.json` for the exact script name,
+   commonly `bun run typecheck` or `npx tsc --noEmit -p .` plus a second
+   pass `-p convex` if the repo has one — read `package.json` `scripts` to
+   confirm). Fix every error your changes introduced. Do not fix pre-existing
+   unrelated errors outside the files you touched.
+2. Re-read every file you created or rewrote, end to end, and confirm against
+   this checklist:
+   - [ ] No hex colors, no raw `fontSize`, no raw radius/spacing numbers
+         outside `constants/` (except a commented one-off, if any).
+   - [ ] No `useColorScheme()` anywhere in the files you touched.
+   - [ ] No `fontWeight` style property anywhere in the files you touched.
+   - [ ] No nested `GlassView` (a `GlassView`/`GlassSurface` whose child is
+         itself another `GlassView`/`GlassSurface`).
+   - [ ] No emoji, no icon import you didn't glob-confirm or that isn't in
+         the "already confirmed" list in section 5.
+   - [ ] No `LedNumber`, no `MetricCapsule`, no dot-matrix/segment digit
+         rendering anywhere in `app/(tabs)/index.tsx` or `components/home/*`.
+   - [ ] No new user-facing string that doesn't already exist somewhere in
+         the repo (search for it if unsure).
+   - [ ] `app/(tabs)/practice.tsx`, `app/(tabs)/analytics.tsx`, and every
+         other file in the "MUST NOT TOUCH" list in section 3 are unchanged
+         (`git diff --stat` should show ONLY the files listed in section 3's
+         "CREATE"/"REWRITE"/"DELETE" lists).
+   - [ ] The dock (`glass-tab-bar.tsx`) is fixed-size and icon-only on every
+         screen it renders on (Home, Practice, Analytics all share this
+         component, so verify the change reads correctly conceptually even
+         though you're only visually testing Home).
+   - [ ] Home's scroll no longer references `useMinimizeOnScroll` or
+         `TAB_BAR_SCROLL_INSET`.
+3. If you have a simulator/device available, launch the app, open the Home
+   tab, and visually confirm: fixed icon-only dock at the bottom, 48pt
+   header capsules with a SpeechMark to their left, a two-line greeting (line
+   2 muted), the daily-goal row with a numeral+gauge and a two-segment bar
+   and a "Start Practicing" capsule, a glass sheet below it containing the
+   rectangular week tiles, the "For you" passage rail (plain numerals, no
+   "Start" text, a play disc instead), the "Your progress" rail (or the
+   empty-state block on a fresh install), and — if there are trouble words —
+   the "Words to master" list. Scroll to the bottom and confirm content
+   clears the dock with room to spare.
+4. Report back exactly which files you changed, what (if anything) you could
+   not resolve per this brief (e.g. an icon glob that returned no match, a
+   token this brief assumed exists but doesn't), and the typecheck result.
+   Do not silently narrow scope — if something in this brief is impossible
+   as written, stop and say so rather than inventing a workaround that
+   contradicts section 2's rules.
+
+================================================================================
+END OF BRIEF
+================================================================================

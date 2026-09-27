@@ -48,15 +48,22 @@ export function AiCoachingCard({ result }: AiCoachingCardProps) {
 
   return (
     <View>
-      <ThemedText variant="title3" weight="bold" style={styles.heading}>
+      <ThemedText variant="sectionTitle" style={styles.heading}>
         AI Coach
       </ThemedText>
 
       <View style={styles.card}>
-        {/* The card's glass is an absolute sibling so the retry button's tinted
-            bed is never nested inside a glass effect. */}
+        {/* Card bed is an absolute sibling so the retry pill is never nested in glass. */}
         <View
-          style={[StyleSheet.absoluteFill, styles.cardShape, { backgroundColor: colors.card }]}
+          style={[
+            StyleSheet.absoluteFill,
+            styles.cardShape,
+            {
+              backgroundColor: colors.card,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.divider,
+            },
+          ]}
         />
 
         {showLoading ? (
@@ -83,13 +90,17 @@ export function AiCoachingCard({ result }: AiCoachingCardProps) {
               onPress={coaching.retry}
               style={({ pressed }) => [
                 styles.retryButton,
-                { backgroundColor: colors.frostFallback },
+                {
+                  backgroundColor: colors.fillTranslucent,
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: colors.outline,
+                },
                 pressed && styles.pressed,
               ]}>
               <HugeiconsIcon
                 icon={Refresh01Icon}
                 size={17}
-                color={colors.atmosphereAccent}
+                color={colors.accentText}
                 strokeWidth={1.8}
               />
               <ThemedText variant="footnote" weight="semibold" tone="accent">
@@ -113,7 +124,7 @@ export function AiCoachingCard({ result }: AiCoachingCardProps) {
                       styles.tip,
                       index > 0 && { borderTopColor: colors.divider, borderTopWidth: 1 },
                     ]}>
-                    <View style={[styles.tipNumber, { backgroundColor: colors.atmosphereAccentBg }]}>
+                    <View style={[styles.tipNumber, { backgroundColor: colors.accentBg }]}>
                       <ThemedText variant="footnote" weight="bold" tone="accent">
                         {index + 1}
                       </ThemedText>
@@ -150,13 +161,19 @@ const styles = StyleSheet.create({
   },
   card: {
     minHeight: CARD_MIN_HEIGHT,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
     overflow: 'hidden',
-    padding: spacing.xs,
+    padding: spacing.xl,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    borderBottomLeftRadius: radius.sm,
+    borderCurve: 'continuous',
   },
   cardShape: {
-    borderRadius: radius.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    borderBottomLeftRadius: radius.sm,
     borderCurve: 'continuous',
   },
   state: {
@@ -167,7 +184,7 @@ const styles = StyleSheet.create({
   },
   stateCopy: {
     flex: 1,
-    gap: spacing.xl,
+    gap: spacing.xs,
   },
   errorState: {
     gap: spacing.sm,

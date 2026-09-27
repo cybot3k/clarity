@@ -1,31 +1,29 @@
 import { PauseIcon, PlayIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { ThemedText } from '@/components/ui';
+import { GlassSurface, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useResultPlayback } from '@/hooks/use-result-playback';
 import { useTheme } from '@/hooks/use-theme';
 import { formatClock } from '@/lib/metrics';
 import type { SessionResult } from '@/types/session';
 
-const PILL_HEIGHT = 72;
+const PILL_HEIGHT = spacing.xxxxl + spacing.lg;
 const PLAY_SIZE = 44;
-const BAR_MAX = 26;
-const BAR_MIN = 6;
+const BAR_MAX = 24;
+const BAR_MIN = 3;
 const BAR_WIDTH = 3;
 
 export type PlaybackPillProps = {
   result: SessionResult;
 };
 
-/** Recording playback: black play circle, the result's static waveform (bars
+/** Recording playback: inverse play circle, the result's static waveform (bars
  * tint as the playhead passes them), and the clock. */
 export function PlaybackPill({ result }: PlaybackPillProps) {
   const { colors } = useTheme();
-  const hasGlass = isLiquidGlassAvailable();
 
   const playback = useResultPlayback(result.audioUri, result.durationMs);
 
@@ -72,7 +70,7 @@ export function PlaybackPill({ result }: PlaybackPillProps) {
               styles.bar,
               {
                 height: BAR_MIN + v * (BAR_MAX - BAR_MIN),
-                backgroundColor: i < playedBars ? colors.accent : colors.bar,
+                backgroundColor: i < playedBars ? colors.accentText : colors.tertiary,
               },
             ]}
           />
@@ -87,20 +85,7 @@ export function PlaybackPill({ result }: PlaybackPillProps) {
 
   return (
     <View style={[styles.wrap, !playback.available && styles.unavailable]}>
-      {hasGlass ? (
-        <GlassView
-          glassEffectStyle="regular"
-          style={[StyleSheet.absoluteFill, styles.shape, { backgroundColor: colors.glassTintStrong }]}
-        />
-      ) : (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            styles.shape,
-            { backgroundColor: colors.card },
-          ]}
-        />
-      )}
+      <GlassSurface radius="full" style={StyleSheet.absoluteFill} />
       {body}
     </View>
   );
@@ -118,9 +103,6 @@ const styles = StyleSheet.create({
   },
   unavailable: {
     justifyContent: 'center',
-  },
-  shape: {
-    borderRadius: radius.full,
   },
   playCircle: {
     width: PLAY_SIZE,
@@ -141,7 +123,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: BAR_WIDTH,
-    borderRadius: BAR_WIDTH / 2,
+    borderRadius: radius.full,
   },
   clock: {
     fontVariant: ['tabular-nums'],

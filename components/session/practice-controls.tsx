@@ -1,12 +1,11 @@
 import { PauseIcon, PlayIcon, Rotate01Icon, StopIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CHROME_BLUR_BLEED, ProgressiveBlur } from '@/components/glass-tabs';
-import { ThemedText } from '@/components/ui';
+import { GlassSurface, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { PracticeError, PracticeStatus } from '@/types/session';
@@ -48,10 +47,14 @@ export function PracticeControls({
 }: PracticeControlsProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const hasGlass = isLiquidGlassAvailable();
 
   const processing = status === 'processing';
   const paused = status === 'paused';
+  const ghost = {
+    backgroundColor: colors.fillTranslucent,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.outline,
+  };
 
   const pillContent = processing ? (
     <>
@@ -77,7 +80,6 @@ export function PracticeControls({
     <View style={[styles.wrap, { bottom: insets.bottom + CARD_BOTTOM_GAP }]} pointerEvents="box-none">
       <ProgressiveBlur
         direction="bottom"
-        tint="dark"
         style={[
           styles.blur,
           {
@@ -87,22 +89,9 @@ export function PracticeControls({
         ]}
       />
       <View style={styles.card}>
-        {/* Glass as an absolute sibling under the content — the solid buttons
+        {/* Glass as an absolute sibling under the content — the buttons
             inside are never nested in another glass effect. */}
-        {hasGlass ? (
-          <GlassView
-            glassEffectStyle="regular"
-            style={[StyleSheet.absoluteFill, styles.cardShape, { backgroundColor: colors.glassTintStrong }]}
-          />
-        ) : (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              styles.cardShape,
-              { backgroundColor: colors.card },
-            ]}
-          />
-        )}
+        <GlassSurface radius="hero" style={StyleSheet.absoluteFill} />
 
         {status === 'error' ? (
           <View style={styles.errorWrap}>
@@ -115,7 +104,7 @@ export function PracticeControls({
                 onPress={onErrorDismiss}
                 style={({ pressed }) => [
                   styles.pill,
-                  { backgroundColor: colors.fillStrong },
+                  ghost,
                   pressed && styles.pressed,
                 ]}>
                 <ThemedText variant="headline">Dismiss</ThemedText>
@@ -138,7 +127,7 @@ export function PracticeControls({
             <LiveWaveform
               meterLevel={meterLevel}
               elapsedMs={elapsedMs}
-              barColor={paused ? colors.tertiary : colors.accent}
+              barColor={paused ? colors.tertiary : colors.accentText}
               timerColor={colors.foreground}
             />
             <View style={styles.controlsRow}>
@@ -147,7 +136,7 @@ export function PracticeControls({
                 disabled={processing}
                 style={({ pressed }) => [
                   styles.circle,
-                  { backgroundColor: colors.frostFallback },
+                  ghost,
                   (pressed || processing) && styles.pressed,
                 ]}>
                 <HugeiconsIcon icon={Rotate01Icon} size={24} color={colors.foreground} strokeWidth={1.8} />
@@ -158,7 +147,7 @@ export function PracticeControls({
                 disabled={processing}
                 style={({ pressed }) => [
                   styles.pill,
-                  { backgroundColor: colors.frostFallback },
+                  ghost,
                   pressed && !processing && styles.pressed,
                 ]}>
                 {pillContent}
@@ -195,13 +184,9 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: spacing.lg,
-    borderRadius: radius.xl,
+    borderRadius: radius.hero,
     borderCurve: 'continuous',
     overflow: 'hidden',
-  },
-  cardShape: {
-    borderRadius: radius.xl,
-    borderCurve: 'continuous',
   },
   controlsRow: {
     flexDirection: 'row',

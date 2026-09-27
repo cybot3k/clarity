@@ -84,7 +84,7 @@ export function WordBreakdown({ words, source, onSelectWord }: WordBreakdownProp
       case 'omitted':
         return colors.danger;
       case 'inserted':
-        return colors.accent;
+        return colors.accentText;
     }
   };
 
@@ -104,7 +104,7 @@ export function WordBreakdown({ words, source, onSelectWord }: WordBreakdownProp
 
   return (
     <View>
-      <ThemedText variant="title3" weight="bold">
+      <ThemedText variant="sectionTitle">
         Word Breakdown
       </ThemedText>
       {total > 0 ? (
@@ -113,9 +113,14 @@ export function WordBreakdown({ words, source, onSelectWord }: WordBreakdownProp
           {source === 'azure' ? ` · ${clear} clear` : null}
         </ThemedText>
       ) : null}
-      <ThemedText variant="footnoteProse" tone="tertiary" style={styles.caption}>
-        {caption}
-      </ThemedText>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.card, borderColor: colors.divider },
+        ]}>
+        <ThemedText variant="footnoteProse" tone="tertiary">
+          {caption}
+        </ThemedText>
 
       <View style={styles.legend}>
         {LEGEND.map(({ status, label }) => (
@@ -176,6 +181,7 @@ export function WordBreakdown({ words, source, onSelectWord }: WordBreakdownProp
           );
         })}
       </ThemedText>
+      </View>
     </View>
   );
 }
@@ -184,15 +190,18 @@ const styles = StyleSheet.create({
   coverage: {
     marginTop: spacing.xs,
   },
-  caption: {
-    marginTop: spacing.xxs,
+  card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    padding: spacing.xl,
+    marginTop: spacing.md,
+    gap: spacing.md,
   },
   legend: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
   },
   legendItem: {
     flexDirection: 'row',

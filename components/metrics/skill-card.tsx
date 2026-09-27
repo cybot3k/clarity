@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.xl,
     gap: spacing.xxl,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },

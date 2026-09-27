@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
+import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SkillCard } from '@/components/metrics';
+import { ScoreValue, SkillCard } from '@/components/metrics';
 import { AiCoachingCard } from '@/components/session/ai-coaching-card';
 import { PlaybackPill } from '@/components/session/playback-pill';
 import { ResultsFooter } from '@/components/session/results-footer';
@@ -13,11 +13,13 @@ import { SessionTopBar } from '@/components/session/session-top-bar';
 import { TranscriptCard } from '@/components/session/transcript-card';
 import { UnscoredNotice } from '@/components/session/unscored-notice';
 import { WordBreakdown } from '@/components/session/word-breakdown';
-import { AtmosphereCanvas, ThemedText } from '@/components/ui';
+import { AtmosphereCanvas, GlassSurface, ThemedText } from '@/components/ui';
 import { SKILL_ORDER } from '@/constants/metrics';
 import { spacing } from '@/constants/theme';
+import { formatClock } from '@/lib/metrics';
 import { useMarkInteractive } from '@/hooks/use-mark-interactive';
 import { useSessionRecords } from '@/hooks/use-session-history';
+import { useTheme } from '@/hooks/use-theme';
 import {
   cleanWordPct,
   sessionSkills,
@@ -27,6 +29,7 @@ import {
 } from '@/lib/score';
 import { summarizeWords } from '@/services/ai-coaching';
 import type { SkillEstimate, SkillKey } from '@/types/history';
+import type { SessionResult } from '@/types/session';
 
 import { useSessionContext } from './_layout';
 
@@ -35,6 +38,53 @@ const CONTENT_TOP_GAP = 62;
 
 /** Clears the absolutely-positioned ResultsFooter. */
 const FOOTER_SCROLL_INSET = 150;
+
+const FACTS = [
+  { key: 'wpm', label: 'WPM' },
+  { key: 'fillers', label: 'Fillers' },
+  { key: 'pauses', label: 'Pauses' },
+  { key: 'time', label: 'Time' },
+] as const;
+
+/** Measured pace, fillers, pauses, and speaking time from this take. Hidden
+ * when nothing was heard, so a silent session is not a row of zeros. */
+function SessionFacts({
+  result,
+  overlapHero,
+}: {
+  result: SessionResult;
+  overlapHero: boolean;
+}) {
+  const { colors } = useTheme();
+  if (result.spokenWords <= 0) return null;
+
+  const values = {
+    wpm: result.paceWpm > 0 ? Math.round(result.paceWpm) : null,
+    fillers: result.fillerCount,
+    pauses: result.pauseCount == null ? null : result.pauseCount,
+    time: formatClock(result.durationMs),
+  };
+
+  return (
+    <GlassSurface
+      radius="lg"
+      style={[styles.facts, overlapHero ? styles.factsOverlap : styles.factsRest]}>
+      {FACTS.map((fact, index) => (
+        <Fragment key={fact.key}>
+          {index > 0 ? (
+            <View style={[styles.factDivider, { backgroundColor: colors.divider }]} />
+          ) : null}
+          <View style={styles.fact}>
+            <ScoreValue value={values[fact.key]} size="tile" unit="" />
+            <ThemedText variant="caption" tone="tertiary">
+              {fact.label}
+            </ThemedText>
+          </View>
+        </Fragment>
+      ))}
+    </GlassSurface>
+  );
+}
 
 function dismissToHome() {
   try {
@@ -184,13 +234,14 @@ export default function ResultsScreen() {
             }
           />
         )}
+        <SessionFacts result={result} overlapHero={sessionScore != null} />
         <View style={styles.playback}>
           <PlaybackPill result={result} />
         </View>
         {sessionScore != null ? (
           <>
             <View style={styles.skillsHeader}>
-              <ThemedText variant="title">Skills</ThemedText>
+              <ThemedText variant="sectionTitle">Skills</ThemedText>
               <ThemedText variant="subhead" weight="regular" tone="secondary">
                 How this session compares to your average
               </ThemedText>
@@ -228,6 +279,28 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+  },
+  facts: {
+    flexDirection: 'row',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
+  },
+  factsOverlap: {
+    marginTop: -spacing.xxxl,
+    marginHorizontal: spacing.md,
+  },
+  factsRest: {
+    marginTop: spacing.lg,
+  },
+  factDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: spacing.xs,
+  },
+  fact: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xxs,
   },
   playback: {
     marginTop: spacing.md,

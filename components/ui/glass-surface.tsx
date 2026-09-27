@@ -19,10 +19,8 @@ export type GlassSurfaceProps = {
 };
 
 /**
- * A frosted card. Nineteen components each carried their own copy of this:
- * check `isLiquidGlassAvailable()`, render `GlassView` with a tint, or fall back
- * to an opaque `View` — which is how the app ended up with two different
- * fallback colors and six different card radii.
+ * A frosted card. Native liquid glass when it is available; otherwise
+ * `frostFallback` with a `frostRim` hairline. Never grained.
  *
  * Never wrap this in an animated opacity: `GlassView` stops rendering its blur
  * under one. Animate a transform on a parent instead.
@@ -49,9 +47,9 @@ export function GlassSurface({
         style={[
           shape,
           {
-            backgroundColor: colors.glassFallback,
+            backgroundColor: colors.frostFallback,
             borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.divider,
+            borderColor: colors.frostRim,
           },
           style,
         ]}>

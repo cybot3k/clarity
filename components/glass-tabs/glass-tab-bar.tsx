@@ -25,7 +25,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TabListProps, TabTriggerSlotProps } from 'expo-router/ui';
 
-import { fonts, radius, springs, type } from '@/constants/theme';
+import { radius, spacing, springs, type, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 import { MINIMIZE_SPRING, setMinimized, useMinimizeState } from './minimize-context';
@@ -33,24 +33,28 @@ import { CHROME_BLUR_BLEED, ProgressiveBlur } from './progressive-blur';
 
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
-const EXPANDED_HEIGHT = 58;
-const MINIMIZED_HEIGHT = 44;
-/** Fixed per-tab widths — the pill hugs its content instead of spanning the
- * screen; minimizing shrinks each item so the pill contracts in both axes. */
-const ITEM_WIDTH_EXPANDED = 80;
-const ITEM_WIDTH_MINIMIZED = 58;
-/** Inner inset between the capsule wall and the tab items. */
-const ROW_PAD_H = 4;
-const LABEL_HEIGHT = 13;
-const ICON_SIZE = 21;
+const ICON_SIZE = 22;
+const LABEL_HEIGHT = 14;
 /** Space between icon and label — folded into the label's animated height so
  * it fully disappears when minimized (keeps the icon perfectly centered). */
 const ITEM_GAP = 2;
 const LABEL_BLOCK = LABEL_HEIGHT + ITEM_GAP;
-const ITEM_PAD_V = 7;
-/** Highlight content heights — radius must track h/2 for a true capsule. */
+/** Optical: centers the 22pt glyph in the 40pt minimized circle. */
+const ITEM_PAD_V = 9;
+/** Highlight content height expanded: glyph, label block, and vertical pad. */
 const HIGHLIGHT_EXPANDED = ICON_SIZE + LABEL_BLOCK + ITEM_PAD_V * 2;
+/** Highlight content height minimized: glyph plus vertical pad. */
 const HIGHLIGHT_MINIMIZED = ICON_SIZE + ITEM_PAD_V * 2;
+/** Gap between the highlight and the pill wall on every side, so the highlight stays concentric. */
+const HIGHLIGHT_INSET = spacing.xs;
+/** Pill height expanded: highlight plus the inset on both sides. */
+const EXPANDED_HEIGHT = HIGHLIGHT_EXPANDED + HIGHLIGHT_INSET * 2;
+/** Pill height minimized: highlight plus the inset on both sides. */
+const MINIMIZED_HEIGHT = HIGHLIGHT_MINIMIZED + HIGHLIGHT_INSET * 2;
+/** Fixed per-tab widths — the pill hugs its content instead of spanning the screen. */
+const ITEM_WIDTH_EXPANDED = 76;
+/** Equals MINIMIZED_HEIGHT, so the minimized highlight is a circle. */
+const ITEM_WIDTH_MINIMIZED = 48;
 /**
  * Slide spring: interruptible by design — rapid tab-hopping retargets with
  * preserved velocity. Slight under-damping gives the pill a tiny settle,
@@ -65,17 +69,20 @@ export type GlassTabBarTheme = {
   highlight: string;
   /** Tint layered over the liquid glass. */
   glassTint: string;
-  /** Opaque-ish background used when liquid glass is unavailable. */
+  /** Translucent background used when liquid glass is unavailable. */
   solidFallback: string;
+  /** Hairline on the non-glass pill. Native glass draws its own rim. */
+  rim: string;
 };
 
-function themeFromColors(c: ReturnType<typeof useTheme>['colors']): GlassTabBarTheme {
+function themeFromColors(c: ThemeColors): GlassTabBarTheme {
   return {
-    activeTint: c.accent,
-    inactiveTint: c.secondary,
-    highlight: c.card,
+    activeTint: c.onTabHighlight,
+    inactiveTint: c.onAtmosphereMuted,
+    highlight: c.tabHighlight,
     glassTint: c.glassTint,
     solidFallback: c.frostFallback,
+    rim: c.frostRim,
   };
 }
 
@@ -157,7 +164,7 @@ export function GlassTabBar({
         [ITEM_WIDTH_EXPANDED, ITEM_WIDTH_MINIMIZED],
         Extrapolation.CLAMP,
       );
-      const raw = (x - ROW_PAD_H) / itemWidth - 0.5;
+      const raw = x / itemWidth - 0.5;
       return Math.min(Math.max(raw, 0), tabCount - 1);
     };
 
@@ -226,22 +233,11 @@ export function GlassTabBar({
     return {
       height,
       // Revolut-style: the pill shrinks in both dimensions.
-      width: itemWidth * tabCount + ROW_PAD_H * 2,
+      width: itemWidth * tabCount,
     };
   });
-
-  // The capsule shape lives on the glass view itself: iOS 26 glass renders
-  // its own native corner configuration (true squircle + rim lighting).
-  // Clipping a rectangular glass with an RN mask breaks that.
-  const shapeStyle = useAnimatedStyle(() => {
-    const height = interpolate(
-      progress.value,
-      [0, 1],
-      [EXPANDED_HEIGHT, MINIMIZED_HEIGHT],
-      Extrapolation.CLAMP,
-    );
-    return { borderRadius: radius.full };
-  });
+  // iOS 26 glass draws its own rim. Radius stays a stadium in both states.
+  const shapeStyle = { borderRadius: radius.full };
 
   // One shared highlight that slides between tabs (transform-only → GPU).
   // All geometry derives from shared values, never from layout callbacks.
@@ -252,12 +248,6 @@ export function GlassTabBar({
       [EXPANDED_HEIGHT, MINIMIZED_HEIGHT],
       Extrapolation.CLAMP,
     );
-    const height = interpolate(
-      progress.value,
-      [0, 1],
-      [HIGHLIGHT_EXPANDED, HIGHLIGHT_MINIMIZED],
-      Extrapolation.CLAMP,
-    );
     const itemWidth = interpolate(
       progress.value,
       [0, 1],
@@ -265,11 +255,11 @@ export function GlassTabBar({
       Extrapolation.CLAMP,
     );
     return {
-      height,
-      width: itemWidth,
+      height: barHeight - HIGHLIGHT_INSET * 2,
+      width: itemWidth - HIGHLIGHT_INSET * 2,
       borderRadius: radius.full,
-      top: (barHeight - height) / 2,
-      transform: [{ translateX: ROW_PAD_H + itemWidth * slideIndex.value }],
+      top: HIGHLIGHT_INSET,
+      transform: [{ translateX: itemWidth * slideIndex.value + HIGHLIGHT_INSET }],
     };
   });
 
@@ -292,13 +282,7 @@ export function GlassTabBar({
           highlightStyle,
         ]}
       />
-      <View
-        style={{
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: ROW_PAD_H,
-        }}>
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
         <BarContext.Provider value={barContext}>{children}</BarContext.Provider>
       </View>
     </>
@@ -312,7 +296,6 @@ export function GlassTabBar({
       {/* Progressive blur rising from the screen's bottom edge behind the pill. */}
       <ProgressiveBlur
         direction="bottom"
-        tint="dark"
         style={{
           position: 'absolute',
           left: 0,
@@ -339,7 +322,12 @@ export function GlassTabBar({
           ) : (
             <Animated.View
               style={[
-                { backgroundColor: theme.solidFallback, borderCurve: 'continuous' },
+                {
+                  backgroundColor: theme.solidFallback,
+                  borderCurve: 'continuous',
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: theme.rim,
+                },
                 barStyle,
                 shapeStyle,
               ]}>
@@ -443,10 +431,8 @@ export function GlassTabButton({
             <TabGlyph item={item} tint={theme.activeTint} />
           </Animated.View>
         </View>
-        {/* Fades out and is clipped by the shrinking box — no layout anim. */}
-        <Animated.Text
-          numberOfLines={1}
-          style={[styles.label, labelStyle]}>
+        {/* ThemedText exception: label color interpolates on the UI thread. */}
+        <Animated.Text numberOfLines={1} style={[styles.label, labelStyle]}>
           {item.label}
         </Animated.Text>
       </Animated.View>
@@ -457,7 +443,6 @@ export function GlassTabButton({
 const styles = StyleSheet.create({
   label: {
     ...type.tabLabel,
-    fontFamily: fonts.semibold,
     marginTop: ITEM_GAP,
   },
 });

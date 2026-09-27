@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { DayChip, ThemedText } from '@/components/ui';
-import { radius, spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { spacing } from '@/constants/theme';
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
 
@@ -17,10 +16,9 @@ export type WeeklyProgressProps = {
 
 /**
  * Rolling 7-day strip: 5 past + today + tomorrow. Not a Sunday-start calendar.
- * Day-of-month is dropped; letters follow Date.getDay().
+ * Day-of-month is dropped; letters follow Date.getDay(). Sits on the canvas.
  */
 export function WeeklyProgress({ now, todayProgress, history }: WeeklyProgressProps) {
-  const { colors } = useTheme();
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(now);
     date.setDate(date.getDate() + i - 5);
@@ -33,14 +31,7 @@ export function WeeklyProgress({ now, todayProgress, history }: WeeklyProgressPr
   });
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.divider,
-        },
-      ]}>
+    <View style={styles.root}>
       <View style={styles.labelRow}>
         <ThemedText variant="caption" tone="secondary">
           This week
@@ -66,13 +57,7 @@ export function WeeklyProgress({ now, todayProgress, history }: WeeklyProgressPr
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.xl,
+  root: {
     gap: spacing.md,
   },
   labelRow: {

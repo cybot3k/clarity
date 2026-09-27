@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Fragment } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { PrimaryButton, ThemedText } from '@/components/ui';
+import { GlassSurface, PrimaryButton, ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -29,7 +29,7 @@ export type WordsToMasterProps = {
 };
 
 /** "Words to master" body: a frosted card whose header pairs a count summary
- * with a "Practice all" pill, over one row per trouble word (frequency chip +
+ * with a "Practice all" pill, over one row per trouble word (quiet count +
  * a tap-to-hear speaker). */
 export function WordsToMaster({
   words,
@@ -50,23 +50,19 @@ export function WordsToMaster({
   };
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.divider,
-        },
-      ]}>
+    <View style={styles.card}>
+      <GlassSurface radius="lg" tint="strong" style={StyleSheet.absoluteFill} />
       <View style={styles.header}>
-        <ThemedText variant="subhead" tone="secondary" style={styles.summary}>
-          {words.length} {words.length === 1 ? 'word needs' : 'words need'} work
+        <ThemedText variant="subhead" weight="regular" tone="secondary" style={styles.summary}>
+          <ThemedText variant="subhead" weight="semibold" tone="primary">
+            {words.length}
+          </ThemedText>
+          {words.length === 1 ? ' word needs work' : ' words need work'}
         </ThemedText>
         <PrimaryButton
           title={generating ? 'Creating passage' : 'Practice all'}
           icon={generating ? undefined : PlayIcon}
-          variant="frost"
+          variant="solid"
           size="md"
           disabled={generating}
           onPress={handlePracticeAll}
@@ -79,14 +75,12 @@ export function WordsToMaster({
           {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
           <View style={styles.row}>
             <View style={styles.wordGroup}>
-              <ThemedText variant="callout" style={styles.word} numberOfLines={1}>
+              <ThemedText variant="title3" weight="regular" tone="primary" style={styles.word} numberOfLines={1}>
                 {item.word}
               </ThemedText>
-              <View style={[styles.chip, { backgroundColor: colors.fill }]}>
-                <ThemedText variant="caption" weight="semibold" tone="tertiary">
-                  {item.count}×
-                </ThemedText>
-              </View>
+              <ThemedText variant="footnote" tone="tertiary">
+                {item.count}×
+              </ThemedText>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -97,7 +91,10 @@ export function WordsToMaster({
               hitSlop={spacing.sm}
               style={({ pressed }) => [
                 styles.speaker,
-                { backgroundColor: colors.fill },
+                {
+                  backgroundColor: colors.fillTranslucent,
+                  borderColor: colors.frostRim,
+                },
                 pressed && styles.pressedStrong,
               ]}>
               {speakingWord === item.word ? (
@@ -118,7 +115,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.lg,
     borderCurve: 'continuous',
-    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -147,31 +143,23 @@ const styles = StyleSheet.create({
   wordGroup: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+    alignItems: 'baseline',
+    gap: spacing.sm,
   },
   word: {
     flexShrink: 1,
-  },
-  chip: {
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.xs,
-    borderCurve: 'continuous',
   },
   speaker: {
     width: SPEAKER_SIZE,
     height: SPEAKER_SIZE,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     marginLeft: ROW_INSET,
-  },
-  pressed: {
-    opacity: 0.85,
   },
   pressedStrong: {
     opacity: 0.6,

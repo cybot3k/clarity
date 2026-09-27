@@ -20,8 +20,8 @@ export function freestyleTopicIdFrom(pseudoId: string): string {
 }
 
 const FREESTYLE_ARTWORK: Passage['artwork'] = {
-  base: ['rgba(240,110,50,0.92)', 'rgba(210,50,120,0.85)'],
-  blob: ['rgba(255,230,150,0.92)', 'rgba(255,140,180,0.55)'],
+  base: ['rgba(221,117,69,0.92)', 'rgba(194,66,122,0.85)'],
+  blob: ['rgba(245,225,161,0.92)', 'rgba(243,152,183,0.55)'],
 };
 
 /** A freestyle topic dressed as a carousel card. */

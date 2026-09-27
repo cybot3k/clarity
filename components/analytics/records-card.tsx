@@ -3,7 +3,7 @@ import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ScoreValue } from '@/components/metrics';
-import { LedNumber, ThemedText } from '@/components/ui';
+import { ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -41,26 +41,22 @@ export function RecordsCard({ rows }: { rows: readonly RecordRow[] }) {
         <Fragment key={row.title}>
           {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
           <View style={styles.row}>
-            <View style={[styles.iconTile, { backgroundColor: colors.fill }]}>
-              <HugeiconsIcon icon={row.icon} size={20} color={colors.foreground} strokeWidth={1.7} />
+            <View style={[styles.iconTile, { borderColor: colors.outline }]}>
+              <HugeiconsIcon icon={row.icon} size={20} color={colors.foreground} strokeWidth={1.5} />
             </View>
             <View style={styles.text}>
               <ThemedText variant="callout" weight="semibold" numberOfLines={1}>
                 {row.title}
               </ThemedText>
-              <ThemedText
-                variant="footnote"
-                weight="regular"
-                tone="tertiary"
-                numberOfLines={1}>
+              <ThemedText variant="footnote" weight="regular" tone="tertiary" numberOfLines={1}>
                 {row.caption}
               </ThemedText>
             </View>
             <View style={styles.trailing}>
               {row.isScore ? (
-                <ScoreValue value={row.value} size="sm" tone="ink" />
+                <ScoreValue value={row.value} size="row" on="canvas" />
               ) : (
-                <LedNumber value={row.value} size="sm" unit={row.unit} tone="ink" />
+                <ScoreValue value={row.value} size="row" on="canvas" unit={row.unit ?? ''} />
               )}
             </View>
           </View>
@@ -74,7 +70,7 @@ const styles = StyleSheet.create({
   card: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderCurve: 'continuous',
     overflow: 'hidden',
   },
@@ -88,6 +84,7 @@ const styles = StyleSheet.create({
     width: ICON_TILE_SIZE,
     height: ICON_TILE_SIZE,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -98,11 +95,9 @@ const styles = StyleSheet.create({
   },
   trailing: {
     flexShrink: 0,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
   },
   divider: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
+    marginLeft: ICON_TILE_SIZE + spacing.md,
   },
 });

@@ -30,7 +30,7 @@ export default function FreestyleScreen() {
 
   useMarkInteractive();
 
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { setResult, retryToken } = useSessionContext();
@@ -184,7 +184,7 @@ export default function FreestyleScreen() {
   const contentTop = insets.top + CONTENT_TOP_GAP;
 
   return (
-    <AtmosphereCanvas fog={false}>
+    <AtmosphereCanvas mode="stage">
     <View style={styles.screen}>
       <LiveTranscript
         finalText={session.finalTranscript}
@@ -194,8 +194,8 @@ export default function FreestyleScreen() {
         colors={{
           foreground: colors.foreground,
           dimmed: colors.dimmed,
-          accent: colors.atmosphereAccent,
-          accentBg: colors.atmosphereAccentBg,
+          accent: colors.accentText,
+          accentBg: colors.accentBg,
         }}
         topInset={contentTop}
         bottomInset={windowHeight * 0.55}

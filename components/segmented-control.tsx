@@ -17,14 +17,14 @@ export type SegmentedControlProps = {
   segments: readonly string[];
   selectedIndex: number;
   onChange: (index: number) => void;
-  /** Default `inverse` (today's black thumb). Analytics passes `ghost`. */
+  /** Default `inverse`. The passage editor passes `ghost`. */
   tone?: 'inverse' | 'ghost';
   style?: StyleProp<ViewStyle>;
 };
 
-/** Custom segmented control in the app's pill language: inverted sliding
- * thumb (same colors as the Start buttons), SF Pro Rounded labels, spring
- * slide between segments. */
+/** Pill segmented control: hairline ghost track, sliding thumb, spring between
+ * segments. `inverse` is the solid thumb; `ghost` is a card thumb so the
+ * passage editor stays readable on a paper form. */
 export function SegmentedControl({
   segments,
   selectedIndex,
@@ -51,13 +51,16 @@ export function SegmentedControl({
 
   return (
     <View
-      style={[styles.track, { backgroundColor: colors.fillTranslucent }, style]}
+      style={[styles.track, { borderColor: colors.outline }, style]}
       onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}>
       {segmentWidth > 0 && (
         <Animated.View
           style={[
             styles.thumb,
             { width: segmentWidth, backgroundColor: thumbFill },
+            ghost
+              ? { borderColor: colors.divider, borderWidth: StyleSheet.hairlineWidth }
+              : null,
             thumbStyle,
           ]}
         />
@@ -71,7 +74,10 @@ export function SegmentedControl({
           accessibilityRole="button"
           accessibilityState={{ selected: index === selectedIndex }}
           style={styles.segment}>
-          <ThemedText variant="subhead" tone={index === selectedIndex ? selectedTone : 'primary'}>
+          <ThemedText
+            variant="subhead"
+            weight="medium"
+            tone={index === selectedIndex ? selectedTone : 'secondary'}>
             {segment}
           </ThemedText>
         </Pressable>
@@ -85,6 +91,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: HEIGHT,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     padding: TRACK_PADDING,
   },
   thumb: {
