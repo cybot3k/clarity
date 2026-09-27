@@ -12,9 +12,6 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Extrapolation,
-  interpolate,
-  interpolateColor,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -25,39 +22,22 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TabListProps, TabTriggerSlotProps } from 'expo-router/ui';
 
-import { radius, spacing, springs, type, type ThemeColors } from '@/constants/theme';
+import { radius, spacing, springs, type ThemeColors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-import { MINIMIZE_SPRING, setMinimized, useMinimizeState } from './minimize-context';
-import { CHROME_BLUR_BLEED, ProgressiveBlur } from './progressive-blur';
-
-const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
-
-const ICON_SIZE = 22;
-const LABEL_HEIGHT = 14;
-/** Space between icon and label — folded into the label's animated height so
- * it fully disappears when minimized (keeps the icon perfectly centered). */
-const ITEM_GAP = 2;
-const LABEL_BLOCK = LABEL_HEIGHT + ITEM_GAP;
-/** Optical: centers the 22pt glyph in the 40pt minimized circle. */
-const ITEM_PAD_V = 9;
-/** Highlight content height expanded: glyph, label block, and vertical pad. */
-const HIGHLIGHT_EXPANDED = ICON_SIZE + LABEL_BLOCK + ITEM_PAD_V * 2;
-/** Highlight content height minimized: glyph plus vertical pad. */
-const HIGHLIGHT_MINIMIZED = ICON_SIZE + ITEM_PAD_V * 2;
-/** Gap between the highlight and the pill wall on every side, so the highlight stays concentric. */
-const HIGHLIGHT_INSET = spacing.xs;
-/** Pill height expanded: highlight plus the inset on both sides. */
-const EXPANDED_HEIGHT = HIGHLIGHT_EXPANDED + HIGHLIGHT_INSET * 2;
-/** Pill height minimized: highlight plus the inset on both sides. */
-const MINIMIZED_HEIGHT = HIGHLIGHT_MINIMIZED + HIGHLIGHT_INSET * 2;
-/** Fixed per-tab widths — the pill hugs its content instead of spanning the screen. */
-const ITEM_WIDTH_EXPANDED = 76;
-/** Equals MINIMIZED_HEIGHT, so the minimized highlight is a circle. */
-const ITEM_WIDTH_MINIMIZED = 48;
+/** Glyph on a 48 control (layout plan §4). */
+const ICON_SIZE = 20;
+/** One control module: every tab is a 48 circle (layout plan D2). */
+const CIRCLE = 48;
+/** Tray wall to circle, on every side. (64 − 48) / 2, so the circles sit concentric. */
+const TRAY_INSET = spacing.sm;
+/** Pitch between tab centers: one circle plus the 8 gap. */
+const SLOT_WIDTH = CIRCLE + spacing.sm;
+/** Every bottom bar is 64 tall (layout plan D3). */
+const TRAY_HEIGHT = CIRCLE + TRAY_INSET * 2;
 /**
  * Slide spring: interruptible by design — rapid tab-hopping retargets with
- * preserved velocity. Slight under-damping gives the pill a tiny settle,
+ * preserved velocity. Slight under-damping gives the disc a tiny settle,
  * safe here because it's transform-only (no layout involved).
  */
 const SLIDE_SPRING = springs.settle;
@@ -65,14 +45,16 @@ const SLIDE_SPRING = springs.settle;
 export type GlassTabBarTheme = {
   activeTint: string;
   inactiveTint: string;
-  /** Sliding highlight pill color. */
+  /** Sliding selected-disc color. */
   highlight: string;
   /** Tint layered over the liquid glass. */
   glassTint: string;
   /** Translucent background used when liquid glass is unavailable. */
   solidFallback: string;
-  /** Hairline on the non-glass pill. Native glass draws its own rim. */
+  /** Hairline on the non-glass tray. Native glass draws its own rim. */
   rim: string;
+  /** Hairline ring on an unselected tab circle. */
+  ring: string;
 };
 
 function themeFromColors(c: ThemeColors): GlassTabBarTheme {
@@ -83,13 +65,15 @@ function themeFromColors(c: ThemeColors): GlassTabBarTheme {
     glassTint: c.glassTint,
     solidFallback: c.frostFallback,
     rim: c.frostRim,
+    ring: c.outline,
   };
 }
 
 export type GlassTabItem = {
   name: string;
+  /** Not drawn. The dock is icon-only, so this is the tab's accessibility label. */
   label: string;
-  /** Hugeicons solid glyph — used for both tint layers. */
+  /** Hugeicons glyph — used for both tint layers. */
   icon: IconSvgElement;
 };
 
@@ -114,9 +98,9 @@ export type GlassTabBarProps = TabListProps & {
 };
 
 /**
- * Floating liquid-glass tab bar with Revolut-style minimize-on-scroll,
- * a sliding highlight, and finger scrubbing. Use via `TabList asChild`
- * with expo-router's headless tabs.
+ * Floating icon-only liquid-glass dock (CH-08): a fixed 176 × 64 stadium of
+ * three 48 circles with a sliding selected disc and finger scrubbing. It never
+ * minimizes. Use via `TabList asChild` with expo-router's headless tabs.
  */
 export function GlassTabBar({
   children,
@@ -128,8 +112,6 @@ export function GlassTabBar({
 }: GlassTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const minimized = useMinimizeState();
-  const progress = minimized.progress;
   const slideIndex = useSharedValue(0);
   const isDragging = useSharedValue(false);
   const lastTicked = useSharedValue(-1);
@@ -139,7 +121,7 @@ export function GlassTabBar({
     [colors, themeOverrides],
   );
 
-  // Picker-style tick while the highlight crosses tab boundaries mid-drag.
+  // Picker-style tick while the disc crosses tab boundaries mid-drag.
   const tick = useCallback(() => {
     if (haptics && Platform.OS === 'ios') {
       Haptics.selectionAsync();
@@ -150,21 +132,16 @@ export function GlassTabBar({
   // scrubbing makes the content jump under the finger.
   const selectIndex = useCallback((index: number) => onIndexSelected?.(index), [onIndexSelected]);
 
-  // Scrubbing: the highlight tracks the finger 1:1 while dragging (no spring
-  // — it must feel attached), haptic ticks fire on boundary crossings, and
+  // Scrubbing: the disc tracks the finger 1:1 while dragging (no spring — it
+  // must feel attached), haptic ticks fire on boundary crossings, and
   // navigation happens only on release. Taps are handled by a Tap gesture
   // racing the pan — the detector consumes the bar's touches, so the inner
   // Pressables never receive them.
   const gesture = useMemo(() => {
-    const indexAtX = (x: number, minimizedValue: number) => {
+    const indexAtX = (x: number) => {
       'worklet';
-      const itemWidth = interpolate(
-        minimizedValue,
-        [0, 1],
-        [ITEM_WIDTH_EXPANDED, ITEM_WIDTH_MINIMIZED],
-        Extrapolation.CLAMP,
-      );
-      const raw = x / itemWidth - 0.5;
+      // Slot i is centered at TRAY_INSET + CIRCLE / 2 + i * SLOT_WIDTH.
+      const raw = (x - TRAY_INSET - CIRCLE / 2) / SLOT_WIDTH;
       return Math.min(Math.max(raw, 0), tabCount - 1);
     };
 
@@ -174,11 +151,9 @@ export function GlassTabBar({
       .onStart(() => {
         isDragging.value = true;
         lastTicked.value = Math.round(slideIndex.value);
-        // Scrubbing is a deliberate bar interaction — surface the labels.
-        setMinimized(minimized, 0);
       })
       .onUpdate((event) => {
-        const index = indexAtX(event.x, progress.value);
+        const index = indexAtX(event.x);
         slideIndex.value = index;
 
         const rounded = Math.round(index);
@@ -208,62 +183,28 @@ export function GlassTabBar({
         if (!success) {
           return;
         }
-        const index = Math.round(indexAtX(event.x, progress.value));
+        const index = Math.round(indexAtX(event.x));
         slideIndex.value = withSpring(index, SLIDE_SPRING);
-        setMinimized(minimized, 0);
         runOnJS(selectIndex)(index);
       });
 
     return Gesture.Race(pan, tap);
-  }, [tabCount, selectIndex, tick, isDragging, lastTicked, slideIndex, minimized, progress]);
+  }, [tabCount, selectIndex, tick, isDragging, lastTicked, slideIndex]);
 
-  const barStyle = useAnimatedStyle(() => {
-    const height = interpolate(
-      progress.value,
-      [0, 1],
-      [EXPANDED_HEIGHT, MINIMIZED_HEIGHT],
-      Extrapolation.CLAMP,
-    );
-    const itemWidth = interpolate(
-      progress.value,
-      [0, 1],
-      [ITEM_WIDTH_EXPANDED, ITEM_WIDTH_MINIMIZED],
-      Extrapolation.CLAMP,
-    );
-    return {
-      height,
-      // Revolut-style: the pill shrinks in both dimensions.
-      width: itemWidth * tabCount,
-    };
-  });
-  // iOS 26 glass draws its own rim. Radius stays a stadium in both states.
-  const shapeStyle = { borderRadius: radius.full };
+  // Fixed size: circles at pitch 56 with the 8 inset on both ends.
+  const trayStyle: ViewStyle = {
+    width: tabCount * SLOT_WIDTH - spacing.sm + TRAY_INSET * 2,
+    height: TRAY_HEIGHT,
+    borderRadius: radius.full,
+    borderCurve: 'continuous',
+  };
 
-  // One shared highlight that slides between tabs (transform-only → GPU).
-  // All geometry derives from shared values, never from layout callbacks.
-  const highlightStyle = useAnimatedStyle(() => {
-    const barHeight = interpolate(
-      progress.value,
-      [0, 1],
-      [EXPANDED_HEIGHT, MINIMIZED_HEIGHT],
-      Extrapolation.CLAMP,
-    );
-    const itemWidth = interpolate(
-      progress.value,
-      [0, 1],
-      [ITEM_WIDTH_EXPANDED, ITEM_WIDTH_MINIMIZED],
-      Extrapolation.CLAMP,
-    );
-    return {
-      height: barHeight - HIGHLIGHT_INSET * 2,
-      width: itemWidth - HIGHLIGHT_INSET * 2,
-      borderRadius: radius.full,
-      top: HIGHLIGHT_INSET,
-      transform: [{ translateX: itemWidth * slideIndex.value + HIGHLIGHT_INSET }],
-    };
-  });
+  // One shared disc that slides between tabs (transform-only → GPU).
+  const highlightStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: SLOT_WIDTH * slideIndex.value }],
+  }));
 
-  const bottomOffset = Math.max(insets.bottom - 16, 12);
+  const bottomOffset = Math.max(insets.bottom - spacing.lg, spacing.md);
   const barContext = useMemo(
     () => ({ slideIndex, isDragging, theme }),
     [slideIndex, isDragging, theme],
@@ -272,17 +213,9 @@ export function GlassTabBar({
   const barContent = (
     <>
       <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            left: 0,
-            backgroundColor: theme.highlight,
-            borderCurve: 'continuous',
-          },
-          highlightStyle,
-        ]}
+        style={[styles.highlight, { backgroundColor: theme.highlight }, highlightStyle]}
       />
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={styles.row}>
         <BarContext.Provider value={barContext}>{children}</BarContext.Provider>
       </View>
     </>
@@ -293,17 +226,6 @@ export function GlassTabBar({
       {...props}
       pointerEvents="box-none"
       style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, entranceStyle]}>
-      {/* Progressive blur rising from the screen's bottom edge behind the pill. */}
-      <ProgressiveBlur
-        direction="bottom"
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: bottomOffset + EXPANDED_HEIGHT + CHROME_BLUR_BLEED,
-        }}
-      />
       <View
         pointerEvents="box-none"
         style={{ alignItems: 'center', marginBottom: bottomOffset }}>
@@ -312,27 +234,25 @@ export function GlassTabBar({
               inside its native bounds, so `isInteractive` responds to presses.
               As a detached sibling it never receives them. */}
           {isLiquidGlassAvailable() ? (
-            <AnimatedGlassView
+            <GlassView
               glassEffectStyle="regular"
               isInteractive
               tintColor={theme.glassTint}
-              style={[{ borderCurve: 'continuous' }, barStyle, shapeStyle]}>
+              style={trayStyle}>
               {barContent}
-            </AnimatedGlassView>
+            </GlassView>
           ) : (
-            <Animated.View
+            <View
               style={[
+                trayStyle,
                 {
                   backgroundColor: theme.solidFallback,
-                  borderCurve: 'continuous',
                   borderWidth: StyleSheet.hairlineWidth,
                   borderColor: theme.rim,
                 },
-                barStyle,
-                shapeStyle,
               ]}>
               {barContent}
-            </Animated.View>
+            </View>
           )}
         </GestureDetector>
       </View>
@@ -342,14 +262,10 @@ export function GlassTabBar({
 
 /** Icon rendered at a fixed tint (used twice for the crossfade layers). */
 function TabGlyph({ item, tint }: { item: GlassTabItem; tint: string }) {
-  return (
-    <View style={{ height: ICON_SIZE, justifyContent: 'center' }}>
-      <HugeiconsIcon icon={item.icon} size={ICON_SIZE} color={tint} />
-    </View>
-  );
+  return <HugeiconsIcon icon={item.icon} size={ICON_SIZE} color={tint} />;
 }
 
-/** One tab trigger: icon + label that fades when minimized. */
+/** One tab trigger: a 48 circle holding the glyph. The label is spoken, not drawn. */
 export function GlassTabButton({
   item,
   index,
@@ -357,92 +273,84 @@ export function GlassTabButton({
   onPress,
   ...props
 }: TabTriggerSlotProps & { item: GlassTabItem; index: number }) {
-  const minimized = useMinimizeState();
-  const progress = minimized.progress;
   const { colors } = useTheme();
   const bar = use(BarContext);
   const theme = bar?.theme ?? themeFromColors(colors);
   const slideIndex = bar?.slideIndex;
 
   // Covers programmatic navigation too (deep links, back gestures). While
-  // scrubbing, the finger owns the highlight — never fight it with a spring.
+  // scrubbing, the finger owns the disc — never fight it with a spring.
   useEffect(() => {
     if (isFocused && bar && !bar.isDragging.value) {
       bar.slideIndex.value = withSpring(index, SLIDE_SPRING);
     }
   }, [isFocused, index, bar]);
 
-  // Tint follows the sliding highlight, not navigation focus: whatever the
-  // pill is over lights up — live while scrubbing, traveling on taps.
+  // Tint follows the sliding disc, not navigation focus: whatever the disc
+  // is over lights up — live while scrubbing, traveling on taps. The hairline
+  // ring fades out under the disc for the same reason.
   const activeGlyphStyle = useAnimatedStyle(() => ({
     opacity: slideIndex ? 1 - Math.min(Math.abs(slideIndex.value - index), 1) : isFocused ? 1 : 0,
   }));
-
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.4], [1, 0], Extrapolation.CLAMP),
-    color: slideIndex
-      ? interpolateColor(
-          Math.min(Math.abs(slideIndex.value - index), 1),
-          [0, 1],
-          [theme.activeTint, theme.inactiveTint],
-        )
-      : isFocused
-        ? theme.activeTint
-        : theme.inactiveTint,
-  }));
-
-  // Height is animated EXPLICITLY (not derived from children) so the icon
-  // stays perfectly centered every frame — layout-driven sizing lags behind
-  // UI-thread animation.
-  const boxStyle = useAnimatedStyle(() => ({
-    height: interpolate(
-      progress.value,
-      [0, 1],
-      [HIGHLIGHT_EXPANDED, HIGHLIGHT_MINIMIZED],
-      Extrapolation.CLAMP,
-    ),
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: slideIndex ? Math.min(Math.abs(slideIndex.value - index), 1) : isFocused ? 0 : 1,
   }));
 
   return (
     <Pressable
       {...props}
+      accessibilityLabel={item.label}
       onPress={(event) => {
         // The GestureDetector normally consumes touches; this still fires
         // for accessibility activation (VoiceOver) and keyboard focus.
         if (bar) bar.slideIndex.value = withSpring(index, SLIDE_SPRING);
-        setMinimized(minimized, 0);
         onPress?.(event);
       }}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      style={styles.circle}>
       <Animated.View
-        style={[
-          { alignSelf: 'stretch', alignItems: 'center', paddingTop: ITEM_PAD_V, overflow: 'hidden' },
-          boxStyle,
-        ]}>
-        {/* Inactive glyph underneath, active glyph crossfading on top. */}
-        <View>
-          <TabGlyph item={item} tint={theme.inactiveTint} />
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              { alignItems: 'center', justifyContent: 'center' },
-              activeGlyphStyle,
-            ]}>
-            <TabGlyph item={item} tint={theme.activeTint} />
-          </Animated.View>
-        </View>
-        {/* ThemedText exception: label color interpolates on the UI thread. */}
-        <Animated.Text numberOfLines={1} style={[styles.label, labelStyle]}>
-          {item.label}
-        </Animated.Text>
+        pointerEvents="none"
+        style={[styles.ring, { borderColor: theme.ring }, ringStyle]}
+      />
+      {/* Inactive glyph underneath, active glyph crossfading on top. */}
+      <TabGlyph item={item} tint={theme.inactiveTint} />
+      <Animated.View style={[styles.activeGlyph, activeGlyphStyle]}>
+        <TabGlyph item={item} tint={theme.activeTint} />
       </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  label: {
-    ...type.tabLabel,
-    marginTop: ITEM_GAP,
+  highlight: {
+    position: 'absolute',
+    top: TRAY_INSET,
+    left: TRAY_INSET,
+    width: CIRCLE,
+    height: CIRCLE,
+    borderRadius: radius.full,
+  },
+  row: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: TRAY_INSET,
+    gap: spacing.sm,
+  },
+  circle: {
+    width: CIRCLE,
+    height: CIRCLE,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  activeGlyph: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

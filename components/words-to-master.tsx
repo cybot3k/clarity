@@ -4,16 +4,16 @@ import * as Haptics from 'expo-haptics';
 import { Fragment } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { GlassSurface, PrimaryButton, ThemedText } from '@/components/ui';
+import { ThemedText } from '@/components/ui';
 import { radius, spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Row inset. Wider on the left than the card's own padding so the word column
- * lines up with the header summary above it. */
-const ROW_INSET = spacing.xl;
-
-/** Speaker button. 36pt of glyph inside a 44pt hit area via `hitSlop`. */
-const SPEAKER_SIZE = 36;
+/** One control module (layout plan D2): the header row, "Practice all", and the speaker disc. */
+const CONTROL = 48;
+/** Glyph on a 48 control. */
+const ICON_SIZE = 20;
+/** List row minimum height (layout plan CO-11). */
+const ROW_MIN_HEIGHT = 72;
 
 export type WordToMaster = { word: string; count: number };
 
@@ -28,9 +28,9 @@ export type WordsToMasterProps = {
   speakingWord?: string | null;
 };
 
-/** "Words to master" body: a frosted card whose header pairs a count summary
- * with a "Practice all" pill, over one row per trouble word (quiet count +
- * a tap-to-hear speaker). */
+/** "Words to master" body, straight on the sheet (CO-11): a header pairing a
+ * count summary with a solid "Practice all" capsule, over one row per trouble
+ * word (quiet count + a tap-to-hear speaker disc). */
 export function WordsToMaster({
   words,
   onPracticeAll,
@@ -41,6 +41,7 @@ export function WordsToMaster({
   const { colors } = useTheme();
 
   const handlePracticeAll = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPracticeAll();
   };
 
@@ -50,24 +51,33 @@ export function WordsToMaster({
   };
 
   return (
-    <View style={styles.card}>
-      <GlassSurface radius="lg" tint="strong" style={StyleSheet.absoluteFill} />
+    <View>
       <View style={styles.header}>
         <ThemedText variant="subhead" weight="regular" tone="secondary" style={styles.summary}>
-          <ThemedText variant="subhead" weight="semibold" tone="primary">
+          <ThemedText variant="subhead" weight="semibold" tone="primary" style={styles.tabular}>
             {words.length}
           </ThemedText>
           {words.length === 1 ? ' word needs work' : ' words need work'}
         </ThemedText>
-        <PrimaryButton
-          title={generating ? 'Creating passage' : 'Practice all'}
-          icon={generating ? undefined : PlayIcon}
-          variant="solid"
-          size="md"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: generating, busy: generating }}
           disabled={generating}
           onPress={handlePracticeAll}
-          style={styles.practiceAll}
-        />
+          style={({ pressed }) => [
+            styles.practiceAll,
+            { backgroundColor: colors.inverseSurface },
+            pressed && styles.pressed,
+          ]}>
+          {generating ? (
+            <ActivityIndicator size="small" color={colors.inverseLabel} />
+          ) : (
+            <HugeiconsIcon icon={PlayIcon} size={ICON_SIZE} color={colors.inverseLabel} />
+          )}
+          <ThemedText variant="headline" weight="medium" tone="inverse" numberOfLines={1}>
+            {generating ? 'Creating passage' : 'Practice all'}
+          </ThemedText>
+        </Pressable>
       </View>
 
       {words.map((item, i) => (
@@ -75,10 +85,15 @@ export function WordsToMaster({
           {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
           <View style={styles.row}>
             <View style={styles.wordGroup}>
-              <ThemedText variant="title3" weight="regular" tone="primary" style={styles.word} numberOfLines={1}>
+              <ThemedText
+                variant="title3"
+                weight="regular"
+                tone="primary"
+                style={styles.word}
+                numberOfLines={1}>
                 {item.word}
               </ThemedText>
-              <ThemedText variant="footnote" tone="tertiary">
+              <ThemedText variant="footnote" tone="tertiary" style={styles.tabular}>
                 {item.count}×
               </ThemedText>
             </View>
@@ -88,19 +103,15 @@ export function WordsToMaster({
               accessibilityState={{ busy: speakingWord === item.word }}
               disabled={speakingWord === item.word}
               onPress={() => handleSpeak(item.word)}
-              hitSlop={spacing.sm}
               style={({ pressed }) => [
                 styles.speaker,
-                {
-                  backgroundColor: colors.fillTranslucent,
-                  borderColor: colors.frostRim,
-                },
+                { backgroundColor: colors.fillTranslucent },
                 pressed && styles.pressedStrong,
               ]}>
               {speakingWord === item.word ? (
                 <ActivityIndicator size="small" color={colors.foreground} />
               ) : (
-                <HugeiconsIcon icon={VolumeHighIcon} size={19} color={colors.foreground} />
+                <HugeiconsIcon icon={VolumeHighIcon} size={ICON_SIZE} color={colors.foreground} />
               )}
             </Pressable>
           </View>
@@ -111,34 +122,35 @@ export function WordsToMaster({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-  },
   header: {
+    height: CONTROL,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingLeft: ROW_INSET,
-    paddingRight: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   summary: {
     flexShrink: 1,
   },
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
   practiceAll: {
     flexShrink: 0,
+    height: CONTROL,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   row: {
+    minHeight: ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: ROW_INSET,
-    paddingRight: spacing.md,
-    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
   wordGroup: {
     flex: 1,
@@ -150,16 +162,17 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   speaker: {
-    width: SPEAKER_SIZE,
-    height: SPEAKER_SIZE,
+    width: CONTROL,
+    height: CONTROL,
     borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: ROW_INSET,
+  },
+  pressed: {
+    opacity: 0.85,
   },
   pressedStrong: {
     opacity: 0.6,

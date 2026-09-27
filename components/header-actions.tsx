@@ -10,6 +10,11 @@ import { radius, spacing } from '@/constants/theme';
 import { useSubscription } from '@/hooks/use-subscription';
 import { useTheme } from '@/hooks/use-theme';
 
+/** One control module: both capsules are 48 tall (layout plan D2). */
+const CONTROL = 48;
+/** Glyph on a 48 control. */
+const ICON_SIZE = 20;
+
 function proButtonLabel(isLoading: boolean, isPro: boolean): string {
   if (isLoading) return 'Checking your subscription';
   return isPro ? 'Manage Clarity Pro' : 'Get Clarity Pro';
@@ -66,17 +71,17 @@ export function HeaderActions({ streak }: { streak: number }) {
         <GlassSurface radius="full" tint="strong" interactive style={styles.streak}>
           <HugeiconsIcon
             icon={access.isPro ? Crown02Icon : FireIcon}
-            size={24}
+            size={ICON_SIZE}
             color={access.isPro ? colors.proGold : colors.streakFlame}
           />
-          <ThemedText variant="callout" weight="medium" tone="primary">
+          <ThemedText variant="callout" weight="medium" tone="primary" style={styles.count}>
             {streak}
           </ThemedText>
         </GlassSurface>
       </Pressable>
       <Pressable onPress={openSettings} accessibilityRole="button" accessibilityLabel="Settings">
         <GlassSurface radius="full" tint="strong" interactive style={styles.cog}>
-          <HugeiconsIcon icon={Settings01Icon} size={24} color={colors.secondary} />
+          <HugeiconsIcon icon={Settings01Icon} size={ICON_SIZE} color={colors.secondary} />
         </GlassSurface>
       </Pressable>
     </GlassContainer>
@@ -90,16 +95,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   streak: {
+    height: CONTROL,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.lg,
     borderRadius: radius.full,
   },
+  count: {
+    fontVariant: ['tabular-nums'],
+  },
   cog: {
-    padding: spacing.sm,
+    width: CONTROL,
+    height: CONTROL,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
