@@ -15,8 +15,12 @@ import { GrainOverlay } from './grain-overlay';
 
 export type AtmosphereCanvasProps = {
   children: ReactNode;
-  /** `stage` keeps a flat band through the reading area. Default `ambient`. */
-  mode?: 'ambient' | 'stage';
+  /**
+   * `stage` keeps a flat band through the reading area. `pearl` is the
+   * destination dashboard canvas: a cool top-left, a faint warm right edge, and
+   * no orb. Default `ambient`.
+   */
+  mode?: 'ambient' | 'stage' | 'pearl';
   style?: StyleProp<ViewStyle>;
 };
 
@@ -67,11 +71,18 @@ export function AtmosphereCanvas({ children, mode = 'ambient', style }: Atmosphe
   const { colors, scheme } = useTheme();
   const { width: W, height: H } = useWindowDimensions();
   const ambient = mode === 'ambient';
+  const pearl = mode === 'pearl';
 
   return (
     <View style={[styles.root, { backgroundColor: colors.atmosphereCanvas }, style]}>
       <View pointerEvents="none" style={[styles.layers, { width: W, height: H }]}>
-        {ambient ? (
+        {pearl ? (
+          <>
+            <FogPool css={radial(1.1 * W, 0.5 * H, 0, 0, colors.canvasFog)} />
+            <FogPool css={radial(0.9 * W, 0.35 * H, 0.5 * W, 0.55 * H, colors.canvasFogCore)} />
+            <FogPool css={radial(0.8 * W, 0.6 * H, W, 0.45 * H, colors.canvasFogLow)} />
+          </>
+        ) : ambient ? (
           <>
             <FogPool css={radial(0.9 * W, 0.55 * H, W, 0, colors.canvasFog)} />
             <FogPool css={radial(0.8 * W, 0.35 * H, 0, 0.38 * H, colors.canvasFogCore)} />

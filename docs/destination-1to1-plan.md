@@ -1,6 +1,6 @@
 # Destination 1:1 plan
 
-Status: plan, 2026-09-27. Nothing here is implemented yet.
+Status: plan, 2026-09-27. Home (§7.2) is implemented, with its root chrome (§7.1 top bar and dock tint) and the tokens it needs from §5. §7.2 records where the build refined the plan. Everything else is not built yet.
 
 ## 1. What this is
 
@@ -265,12 +265,13 @@ Match: hairline circles with no fill at the top. The dock is a near-white stadiu
 | Canvas | `scheme="pearl"`: no orb, neutral pools. |
 | TX-01 greeting | Colors only: line 1 `#0D0D0D`, line 2 `tertiary` `#7A7E83`. |
 | TX-05 goal row | Ink retune. The CO-12d gauge arc stays ink. |
-| CO-07 split bar (S3) | Done segment `accentBg` fill + lime ◉ pip. Left segment `fillTranslucent` + hairline ◯ pip. The now-marker head **and a 1 pt lime line through the gap** (S3). Today the head is ink with no line (Q7). |
+| CO-07 split bar (S3) | **Built:** done segment is solid `accent` with an `onAccent` pip and value. Left segment is `fillTranslucent` + hairline with a hollow pip. The now-marker is an **ink** head with a 1 pt ink line through the gap, as in S1. A lime line was planned (S3), but lime on the pearl canvas is about 1.1:1 and disappears. |
 | CH-10 "Start Practicing" | Unchanged: 64 stadium, lime handle on the right. |
-| Sheet | `Sheet surface="pearl"`: opaque white, radius 44. Replaces the `GlassSurface` block in `app/(tabs)/index.tsx`. |
+| Sheet | `Sheet surface="pearl"`: opaque white, radius 44. Replaces the `GlassSurface` block in `app/(tabs)/index.tsx`. **Built** as `HomeSheet` in `components/home/` until a second screen needs it. |
+| Section headers (S1 "Credit History") | **Built:** every sheet section opens with S1's module row: an outline 48 identity disc, the title (`title` 22 regular) with its subtitle under it, and an optional trailing readout ("NN% today"). |
 | CO-06 week tiles (S3) | Met badge = **lime fill + `onAccent` tick** (today: `positive` green). Not met = hollow `track` ring (no ×; Home can't call a day failed). Today's tile gets an ink rim; tomorrow is outline only. Tile radius stays `sm` 12. |
-| For you, CO-03 (S2 TD card) | `AtmosphereSurface mesh={passage.mesh}` at radius **40**. Action disc = `ControlDisc fill="solid"`, pinned black in both modes as on S2. The identity ring arc is white, 2 pt. Lit dots in the dot row are **lime**, unlit are `frostRimOnMesh` (S2 dot rows). |
-| Your progress, CO-02L (S2 white tiles) | **Δ layout** (Home CO-02L: "Mesh family"). Tiles become **opaque white `card`, radius 40**. Identity disc is `outline`, action disc is `tinted` ↗ (`ArrowUpRight01Icon`, already imported). Numeral ink, denominator/unit muted on the baseline, title `title3` regular ink. Warning badge slot collapses (Q4). The sheet is white too, so each tile gets a `divider` hairline to separate from it. S2's tiles sit on the grey canvas; the Home sheet is white. |
+| For you, CO-03 (S2 TD card) | `AtmosphereSurface mesh={passage.mesh}` at radius **40**. Action disc = `ControlDisc fill="solid"`, pinned black in both modes as on S2. The identity ring arc is white, 2 pt. Lit dots in the dot row are **lime**, unlit are `artworkFill`. **Built:** the Glow pool sits behind the dot row (`atmosphere.cardMesh`), and an `artworkScrimStrong` foot scrim keeps the footer's white ink legible. S2's own footer sits on its brightest region. |
+| Your progress, CO-02L (S2 white tiles) | **Δ layout** (Home CO-02L: "Mesh family"). Radius 40. Identity disc is `outline`. Numeral ink, denominator/unit muted on the baseline, title `title3` regular ink. Warning badge slot collapses (Q4). **Built:** S2 puts white tiles on a grey canvas, but the Home sheet is already white, so the relationship is inverted. Tiles take the soft `fillTranslucent` grey, and their ↗ disc is white (`ControlDisc fill="card"`). There is no hairline. |
 | Words to master | Colors only. The speaker disc becomes `ControlDisc fill="tinted"`. |
 
 Files: `app/(tabs)/index.tsx`, `components/home/{goal-row,passage-rail,progress-rail}.tsx`, `components/weekly-progress.tsx`, `components/words-to-master.tsx`.

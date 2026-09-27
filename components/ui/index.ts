@@ -6,6 +6,11 @@ export {
   type AtmosphereMesh,
   type AtmosphereSurfaceProps,
 } from './atmosphere-surface';
+export {
+  ControlDisc,
+  type ControlDiscFill,
+  type ControlDiscProps,
+} from './control-disc';
 export { ControlPill, type ControlPillProps, type ControlPillVariant } from './control-pill';
 export { DayChip, type DayChipProps } from './day-chip';
 export { DottedStroke, type DottedStrokeProps } from './dotted-stroke';

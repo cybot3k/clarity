@@ -17,7 +17,7 @@
  * scale would be an abstraction nothing adopts.
  */
 
-export { atmosphere, type LedSize } from './atmosphere';
+export { atmosphere, MESH_NAMES, type LedSize, type MeshName } from './atmosphere';
 export { colors, type ColorSchemeName, type ThemeColors } from './colors';
 export { fontAssets } from './font-assets';
 export { fonts } from './fonts';
